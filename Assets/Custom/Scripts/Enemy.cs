@@ -22,25 +22,7 @@ public class Enemy : MonoBehaviour
     }
 
     private void FixedUpdate()
-    {
-        if (_bulletSource == null)
-        {
-            switch (Type)
-            {
-                case EnemyType.Green:
-                    _bulletSource = GameManager.Instance.GreenBulletSource;
-                    break;
-                case EnemyType.Red:
-                    _bulletSource = GameManager.Instance.RedBulletSource;
-                    break;
-                case EnemyType.Blue:
-                    _bulletSource = GameManager.Instance.BlueBulletSource;
-                    break;
-                default:
-                    break;
-            }
-        }
-
+    {        
         if (GameManager.Instance.IsStarted)
         {
             if (GameManager.Instance.ActiveLaserBeam != null && GameManager.Instance.ActiveLaserBeam.isActiveAndEnabled)
@@ -57,13 +39,68 @@ public class Enemy : MonoBehaviour
             if (_msSinceShot >= (60 / AudioManager.Instance.BPM * 1)) //every 1 beats
             {
                 _msSinceShot = 0;
-                Bullet bullet = GameObject.Instantiate<Bullet>(_bulletSource);
+                Bullet bullet = null;
+                switch (Type)
+                {
+                    case EnemyType.Green:
+                        while(bullet?.gameObject.activeSelf??true)
+                        {
+                            bullet = Bullet.GreenBullets[Bullet.GreenBulletCount];
+                            Bullet.GreenBulletCount++;
+                            if (Bullet.GreenBulletCount > 999)
+                            {
+                                Bullet.GreenBulletCount = 0;
+                            }
+                        }
+                        
+                        break;
+                    case EnemyType.Red:
+                        //while (bullet?.gameObject.activeSelf ?? true)
+                        //{
+                        //    bullet = Bullet.RedBullets[Bullet.RedBulletCount];
+                        //    Bullet.RedBulletCount++;
+                        //    if (Bullet.RedBulletCount > 999)
+                        //    {
+                        //        Bullet.RedBulletCount = 0;
+                        //    }
+                        //}
+                        break;
+                    case EnemyType.Blue:
+                        while (bullet?.gameObject.activeSelf ?? true)
+                        {
+                            bullet = Bullet.BlueBullets[Bullet.BlueBulletCount];
+                            Bullet.BlueBulletCount++;
+                            if (Bullet.BlueBulletCount > 999)
+                            {
+                                Bullet.BlueBulletCount = 0;
+                            }
+                        }
+                        break;
+                    default:
+                        break;
+                }
+                bullet.gameObject.SetActive(true);
                 bullet.gameObject.transform.position = transform.position;
-                bullet.Direction = (GameManager.Instance.LeftController.transform.position - transform.position).normalized;
+                bullet.Direction = (GameManager.Instance.UFO.transform.position - transform.position).normalized;
             }
             else
             {
                 _msSinceShot += Time.deltaTime;
+            }
+
+            switch (Type)
+            {
+                case EnemyType.Green:
+                    var vector = Quaternion.AngleAxis(-80, Vector3.up) * (GameManager.Instance.UFO.transform.position - transform.position);
+                    this.transform.position += vector.normalized * 0.5f * Time.deltaTime;
+                    break;
+                case EnemyType.Red:
+                    this.transform.position += (GameManager.Instance.UFO.transform.position - transform.position).normalized * 0.2f * Time.deltaTime;
+                    break;
+                case EnemyType.Blue:
+                    break;
+                default:
+                    break;
             }
         }
     }

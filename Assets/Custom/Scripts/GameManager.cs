@@ -14,11 +14,17 @@ public class GameManager : MonoBehaviour
     public Bullet BlueBulletSource;
     public GameObject LeftController;
     public GameObject RightController;
-    public GameObject SightLine;
-    public LaserBeam ActiveLaserBeam {get; set;}
+    public GameObject SightLineSource;
+    public GameObject UFO;
+    public Enemy EnemyRedSource;
+    public Enemy EnemyGreenSource;
+    public Enemy EnemyBlueSource;
+    public LaserBeam ActiveLaserBeam {get; set;}    
 
     private float _msSinceBeam = 0;
-    public bool IsStarted { get; set; } = false;    
+    private float _msSinceEnemySpawn = 0;
+    public bool IsStarted { get; set; } = false;
+    private GameObject _sightLine;
 
     private static GameManager _instance;
     public static GameManager Instance
@@ -32,7 +38,14 @@ public class GameManager : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        _instance = this;        
+        _instance = this;
+
+        for (int i = 0; i < 1000; i++)
+        {
+            Bullet.BlueBullets[i] = GameObject.Instantiate(GameManager.Instance.BlueBulletSource);
+            Bullet.GreenBullets[i] = GameObject.Instantiate(GameManager.Instance.GreenBulletSource);
+            Bullet.RedBullets[i] = GameObject.Instantiate(GameManager.Instance.RedBulletSource);
+        }
     }
 
     // Update is called once per frame
@@ -64,8 +77,35 @@ public class GameManager : MonoBehaviour
                 _msSinceBeam += Time.deltaTime;
             }
 
-            SightLine.transform.position = LeftController.transform.position;        
-            SightLine.transform.rotation = Quaternion.LookRotation(lookDirection);
+            if (_msSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 2)) //every 2 beats
+            {
+                _msSinceEnemySpawn = 0;                
+                Enemy enemySpawn = null;
+                switch (UnityEngine.Random.Range((int)0,(int)3).ToString())
+                {
+                    case "0":
+                        enemySpawn = EnemyRedSource;
+                        break;
+                    case "1":
+                        enemySpawn = EnemyGreenSource;
+                    break;
+                    case "2":
+                        enemySpawn = EnemyBlueSource;
+                        break;
+                    default:
+                        break;
+                }
+                enemySpawn = GameObject.Instantiate(enemySpawn);
+                enemySpawn.gameObject.SetActive(true);
+                enemySpawn.gameObject.transform.position = GetRandomPosition(1, 2);                
+            }
+            else
+            {
+                _msSinceEnemySpawn += Time.deltaTime;
+            }
+
+            _sightLine.transform.position = LeftController.transform.position;
+            _sightLine.transform.rotation = Quaternion.LookRotation(lookDirection);
         }
     }
 
@@ -89,5 +129,29 @@ public class GameManager : MonoBehaviour
     public void StartGame()
     {
         IsStarted = true;
+        _sightLine = GameObject.Instantiate(SightLineSource);
+        _sightLine.SetActive(true);
+    }
+
+    public void StopGame()
+    {
+        IsStarted = false;
+        Destroy(_sightLine);
+    }
+
+    public static Vector3 GetRandomPosition(float minRange, float maxRange)
+    {
+        return new Vector3(GetRandomPositionComponent(minRange, maxRange, true), GetRandomPositionComponent(0.1f, 2f, false), GetRandomPositionComponent(minRange, maxRange, true));
+    }
+
+    public static float GetRandomPositionComponent(float minRange, float maxRange, bool blnAllowNegatives)
+    {
+        float number = UnityEngine.Random.Range(minRange, maxRange);
+        if (blnAllowNegatives)
+        {            
+            number *= (UnityEngine.Random.Range((int)-1, (int)2) > 0 ? 1 : -1);
+            Debug.Log(number);
+        }
+        return number;
     }
 }
