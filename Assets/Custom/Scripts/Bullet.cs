@@ -31,17 +31,17 @@ public class Bullet : MonoBehaviour
         {
             this.gameObject.SetActive(false);
         }
-        else if (Math.Abs(transform.position.x) > 3)
+        else if (Math.Abs(transform.position.x) > 4)
         {
             this.gameObject.SetActive(false);
         }
-        else if (Math.Abs(transform.position.z) > 3)
+        else if (Math.Abs(transform.position.z) > 4)
         {
             this.gameObject.SetActive(false);
         }
         else
         {
-            transform.position += Direction * 0.2f * Time.deltaTime;
+            transform.position += Direction * 0.2f * Time.deltaTime * GameManager.Instance.Speed;
         }
     }
 }

@@ -19,12 +19,16 @@ public class GameManager : MonoBehaviour
     public Enemy EnemyRedSource;
     public Enemy EnemyGreenSource;
     public Enemy EnemyBlueSource;
-    public LaserBeam ActiveLaserBeam {get; set;}    
+    public LaserBeam ActiveLaserBeam {get; set;}
+    public float Speed = 1f;
 
     private float _msSinceBeam = 0;
     private float _msSinceEnemySpawn = 0;
+    private float _msSinceShot = 0;
     public bool IsStarted { get; set; } = false;
     private GameObject _sightLine;
+
+    public List<Enemy> EnemiesHit = new List<Enemy>();
 
     private static GameManager _instance;
     public static GameManager Instance
@@ -97,11 +101,27 @@ public class GameManager : MonoBehaviour
                 }
                 enemySpawn = GameObject.Instantiate(enemySpawn);
                 enemySpawn.gameObject.SetActive(true);
-                enemySpawn.gameObject.transform.position = GetRandomPosition(1, 2);                
+                enemySpawn.gameObject.transform.position = LeftController.transform.position + GetRandomPosition(1, 2);                
             }
             else
             {
-                _msSinceEnemySpawn += Time.deltaTime;
+                _msSinceEnemySpawn += Time.deltaTime * GameManager.Instance.Speed;
+            }
+
+            if (_msSinceShot >= (60 / AudioManager.Instance.BPM * 0.25f)) //every half beat
+            {
+                _msSinceShot = 0;
+
+                foreach (var item in EnemiesHit)
+                {
+                    item.Explode();
+                }
+
+                EnemiesHit.Clear();
+            }
+            else
+            {
+                _msSinceShot += Time.deltaTime;
             }
 
             _sightLine.transform.position = LeftController.transform.position;
@@ -131,6 +151,8 @@ public class GameManager : MonoBehaviour
         IsStarted = true;
         _sightLine = GameObject.Instantiate(SightLineSource);
         _sightLine.SetActive(true);
+
+        AudioManager.Instance.Play();
     }
 
     public void StopGame()

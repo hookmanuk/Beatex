@@ -5,6 +5,7 @@ using UnityEngine;
 public class AudioManager : MonoBehaviour
 {
     public float BPM { get; set; }
+    public AudioSource AudioSource;
 
     private static AudioManager _instance;
     public static AudioManager Instance {
@@ -17,7 +18,7 @@ public class AudioManager : MonoBehaviour
     void Start()
     {
         _instance = this;
-        BPM = 120;
+        BPM = 113;
     }
 
     // Update is called once per frame
@@ -25,4 +26,15 @@ public class AudioManager : MonoBehaviour
     {
         
     }
+
+    public void Play()
+    {
+        StartCoroutine(WaitThenPlay(0.01f));        
+    }
+
+    IEnumerator WaitThenPlay(float waitSecs)
+    {
+        yield return new WaitForSeconds(waitSecs);
+        AudioSource.Play();
+    }    
 }
