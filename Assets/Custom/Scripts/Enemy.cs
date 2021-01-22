@@ -6,8 +6,9 @@ public class Enemy : MonoBehaviour
 {
     public EnemyType Type;
     private float _msSinceShot = 0;
-    private bool _isHit = false;
+    public bool IsHit = false;
     private float _hitRate;
+    private int _health = 1;
 
     private Bullet _bulletSource;
 
@@ -17,13 +18,16 @@ public class Enemy : MonoBehaviour
         switch (Type)
         {
             case EnemyType.Green:
-                _hitRate = 4;
+                _hitRate = 2;
+                _health = 1;
                 break;
             case EnemyType.Red:
                 _hitRate = 0;
+                _health = 1;
                 break;
             case EnemyType.Blue:
-                _hitRate = 2;
+                _hitRate = 1f;
+                _health = 3;
                 break;
             default:
                 break;
@@ -40,17 +44,17 @@ public class Enemy : MonoBehaviour
     {        
         if (GameManager.Instance.IsStarted)
         {
-            if (GameManager.Instance.ActiveLaserBeam != null && GameManager.Instance.ActiveLaserBeam.isActiveAndEnabled && !_isHit)
-            {
-                //this is wrong, only checking for middle of beam
-                var diff = transform.position - GameManager.Instance.ActiveLaserBeam.transform.position;
+            //if (GameManager.Instance.ActiveLaserBeam != null && GameManager.Instance.ActiveLaserBeam.isActiveAndEnabled && !_isHit)
+            //{
+            //    //this is wrong, only checking for middle of beam
+            //    var diff = transform.position - GameManager.Instance.ActiveLaserBeam.transform.position;
 
-                //Debug.Log(diff.magnitude);
-                if (diff.magnitude < 0.1)
-                {
-                    Explode();
-                }
-            }
+            //    //Debug.Log(diff.magnitude);
+            //    if (diff.magnitude < 0.1)
+            //    {
+            //        Explode();
+            //    }
+            //}
 
             if (_hitRate > 0)
             {
@@ -58,15 +62,21 @@ public class Enemy : MonoBehaviour
                 {
                     _msSinceShot = 0;
                     Bullet bullet = null;
+                    int bulletsOutLoop = 0;
                     switch (Type)
                     {
-                        case EnemyType.Green:
+                        case EnemyType.Green:                            
                             while (bullet?.gameObject.activeSelf ?? true)
                             {
                                 bullet = Bullet.GreenBullets[Bullet.GreenBulletCount];
                                 Bullet.GreenBulletCount++;
-                                if (Bullet.GreenBulletCount > 999)
+                                if (Bullet.GreenBulletCount >= Bullet.GreenBullets.Length - 1)
                                 {
+                                    bulletsOutLoop++;
+                                    if (bulletsOutLoop == 2)
+                                    {
+                                        break;
+                                    }
                                     Bullet.GreenBulletCount = 0;
                                 }
                             }
@@ -83,13 +93,18 @@ public class Enemy : MonoBehaviour
                             //    }
                             //}
                             break;
-                        case EnemyType.Blue:
+                        case EnemyType.Blue:                            
                             while (bullet?.gameObject.activeSelf ?? true)
                             {
                                 bullet = Bullet.BlueBullets[Bullet.BlueBulletCount];
                                 Bullet.BlueBulletCount++;
-                                if (Bullet.BlueBulletCount > 999)
+                                if (Bullet.BlueBulletCount >= Bullet.BlueBullets.Length - 1)
                                 {
+                                    bulletsOutLoop++;
+                                    if (bulletsOutLoop == 2)
+                                    {
+                                        break;
+                                    }
                                     Bullet.BlueBulletCount = 0;
                                 }
                             }
@@ -97,10 +112,13 @@ public class Enemy : MonoBehaviour
                         default:
                             break;
                     }
-                    bullet.gameObject.SetActive(true);
-                    bullet.gameObject.transform.position = transform.position;
-                    bullet.Direction = (GameManager.Instance.UFO.transform.position - transform.position).normalized;
-                    bullet.gameObject.transform.rotation = Quaternion.LookRotation(bullet.Direction);
+                    if (bullet != null)
+                    {
+                        bullet.gameObject.SetActive(true);
+                        bullet.gameObject.transform.position = transform.position;
+                        bullet.Direction = (GameManager.Instance.UFO.transform.position - transform.position).normalized;
+                        bullet.gameObject.transform.rotation = Quaternion.LookRotation(bullet.Direction);
+                    }
                 }
                 else
                 {
@@ -113,21 +131,26 @@ public class Enemy : MonoBehaviour
                 StartCoroutine(Move());
             }            
         }
+    }    
+
+    public void Hit()
+    {
+        _health -= 1;
+        if (_health == 0)
+        { 
+            IsHit = true;
+            GetComponent<AudioSource>().Play();
+            StartCoroutine(HitDead());
+        }
+        else
+        {
+            //play some hit but not dead anim
+            //GetComponent<AudioSource>().Play();
+            StartCoroutine(HitNotDead());
+        }
     }
 
-    private void Hit()
-    {
-        _isHit = true;
-        GameManager.Instance.EnemiesHit.Add(this);
-    }
-
-    public void Explode()
-    {
-        GetComponent<AudioSource>().Play();
-        StartCoroutine(Brighten());        
-    }
-    
-    IEnumerator Brighten()
+    IEnumerator HitNotDead()
     {
         float t = 0;
         float intensity = 5f;
@@ -137,16 +160,36 @@ public class Enemy : MonoBehaviour
 
         while (t < 0.1f)
         {
-            intensity = 5 + t / 0.1f * 3;
+            intensity = (_health - 2) - t / 0.1f * 1;
             float factor = Mathf.Pow(2, intensity);
             material.SetColor("_EmissionColor", new Color(col.r * factor, col.g * factor, col.b * factor));
             yield return new WaitForSeconds(0.01f);
             t += 0.01f;
         }
+    }
 
-        while (t < 0.4f)
+
+    IEnumerator HitDead()
+    {
+        float t = 0;
+        float intensity = 5f;
+
+        var material = GetComponentInChildren<MeshRenderer>().material;
+        var col = material.GetColor("_EmissionColor");
+
+        while (t < 0.07f)
         {
-            intensity = 8 - t / 0.4f * 8;
+            intensity = t / 0.07f * 5;
+            float factor = Mathf.Pow(2, intensity);
+            //float factor = intensity;
+            material.SetColor("_EmissionColor", new Color(col.r * factor, col.g * factor, col.b * factor));
+            yield return new WaitForSeconds(0.01f);
+            t += 0.01f;
+        }
+
+        while (t < 0.2f)
+        {
+            intensity = 5 - t / 0.2f * 5;
             float factor = Mathf.Pow(2, intensity);
             material.SetColor("_EmissionColor", new Color(col.r * factor, col.g * factor, col.b * factor));
             yield return new WaitForSeconds(0.01f);
@@ -176,7 +219,7 @@ public class Enemy : MonoBehaviour
                 vector = (GameManager.Instance.UFO.transform.position - transform.position).normalized;                
                 while (t < 0.1)
                 {
-                    transform.position += vector * 0.5f * Time.deltaTime;
+                    transform.position += vector * 1.5f * Time.deltaTime;
                     t += Time.deltaTime;
                     yield return new WaitForSeconds(0.01f);
                 }

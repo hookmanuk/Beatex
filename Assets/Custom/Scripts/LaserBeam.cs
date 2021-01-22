@@ -15,14 +15,14 @@ public class LaserBeam : MonoBehaviour
         
     }
 
-    private void OnTriggerEnter(Collider other)
-    {
-        Enemy enemy;
+    //private void OnTriggerEnter(Collider other)
+    //{
+    //    Enemy enemy;
 
-        enemy = other.GetComponent<Enemy>();
-        if (enemy != null)
-        {
-            enemy.Explode();
-        }
-    }
+    //    enemy = other.GetComponent<Enemy>();
+    //    if (enemy != null)
+    //    {
+    //        enemy.Explode();
+    //    }
+    //}
 }

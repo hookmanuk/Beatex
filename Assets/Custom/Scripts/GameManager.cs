@@ -23,11 +23,11 @@ public class GameManager : MonoBehaviour
     public float Speed = 1f;
 
     private float _msSinceBeam = 0;
-    private float _msSinceEnemySpawn = 0;
-    private float _msSinceShot = 0;
+    private float _msSinceEnemySpawn = 0;    
     public bool IsStarted { get; set; } = false;
     public bool IsOnBeat { get; set; } = false;
     private GameObject _sightLine;
+    private object _destroyer = null;
 
     public List<Enemy> EnemiesHit = new List<Enemy>();
 
@@ -57,7 +57,7 @@ public class GameManager : MonoBehaviour
     void Update()
     {
         
-    }
+    }  
 
     private void FixedUpdate()
     {        
@@ -69,66 +69,73 @@ public class GameManager : MonoBehaviour
 
         if (GameManager.Instance.IsStarted)
         {
-            var lookDirection = (RightController.transform.position - LeftController.transform.position).normalized;
-
-            if (_msSinceBeam >= (60 / AudioManager.Instance.BPM * 1)) //every 1 beats
+            Collider[] objectsHitPlayer = Physics.OverlapSphere(LeftController.transform.position, 0.04f);
+            foreach (var item in objectsHitPlayer)
             {
-                IsOnBeat = true;
-                _msSinceBeam = 0;
-                ActiveLaserBeam = GameObject.Instantiate(LaserBeamSource);
-                StartCoroutine(ShootBeam());
-            }
-            else
-            {
-                IsOnBeat = false;
-                _msSinceBeam += Time.deltaTime;
-            }
-
-            if (_msSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 2)) //every 2 beats
-            {
-                _msSinceEnemySpawn = 0;                
-                Enemy enemySpawn = null;
-                switch (UnityEngine.Random.Range((int)0,(int)3).ToString())
+                if (item.gameObject.GetComponentInParent<Enemy>() != null)
                 {
-                    case "0":
-                        enemySpawn = EnemyRedSource;
-                        break;
-                    case "1":
-                        enemySpawn = EnemyGreenSource;
-                    break;
-                    case "2":
-                        enemySpawn = EnemyBlueSource;
-                        break;
-                    default:
-                        break;
+                    //hit by enemy
+                    _destroyer = item.gameObject.GetComponentInParent<Enemy>();                    
                 }
-                enemySpawn = GameObject.Instantiate(enemySpawn);
-                enemySpawn.gameObject.SetActive(true);
-                enemySpawn.gameObject.transform.position = LeftController.transform.position + GetRandomPosition(1, 2);                
+        
+                if (item.gameObject.GetComponent<Bullet>() != null)
+                {
+                    //hit by bullet
+                    _destroyer = item.gameObject.GetComponent<Bullet>();                    
+                }
+            }
+            if (_destroyer != null)
+            {
+                StopGame();
             }
             else
             {
-                _msSinceEnemySpawn += Time.deltaTime * GameManager.Instance.Speed;
-            }
 
-            if (_msSinceShot >= (60 / AudioManager.Instance.BPM * 0.25f)) //every half beat
-            {
-                _msSinceShot = 0;
+                var lookDirection = (RightController.transform.position - LeftController.transform.position).normalized;
 
-                foreach (var item in EnemiesHit)
+                if (_msSinceBeam >= (60 / AudioManager.Instance.BPM * 1)) //every 1 beats
                 {
-                    item.Explode();
+                    IsOnBeat = true;
+                    _msSinceBeam = 0;
+                    ActiveLaserBeam = GameObject.Instantiate(LaserBeamSource);
+                    StartCoroutine(ShootBeam());
+                }
+                else
+                {
+                    IsOnBeat = false;
+                    _msSinceBeam += Time.deltaTime;
                 }
 
-                EnemiesHit.Clear();
-            }
-            else
-            {
-                _msSinceShot += Time.deltaTime;
-            }
+                if (_msSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 2)) //every 2 beats
+                {
+                    _msSinceEnemySpawn = 0;
+                    Enemy enemySpawn = null;
+                    switch (UnityEngine.Random.Range((int)0, (int)3).ToString())
+                    {
+                        case "0":
+                            enemySpawn = EnemyRedSource;
+                            break;
+                        case "1":
+                            enemySpawn = EnemyGreenSource;
+                            break;
+                        case "2":
+                            enemySpawn = EnemyBlueSource;
+                            break;
+                        default:
+                            break;
+                    }
+                    enemySpawn = GameObject.Instantiate(enemySpawn);
+                    enemySpawn.gameObject.SetActive(true);
+                    enemySpawn.gameObject.transform.position = LeftController.transform.position + GetRandomPosition(1, 2);
+                }
+                else
+                {
+                    _msSinceEnemySpawn += Time.deltaTime * GameManager.Instance.Speed;
+                }
 
-            _sightLine.transform.position = LeftController.transform.position;
-            _sightLine.transform.rotation = Quaternion.LookRotation(lookDirection);
+                //_sightLine.transform.position = LeftController.transform.position;
+                //_sightLine.transform.rotation = Quaternion.LookRotation(lookDirection);
+            }
         }
     }
 
@@ -136,36 +143,109 @@ public class GameManager : MonoBehaviour
     {
         ActiveLaserBeam.transform.position = LeftController.transform.position;
         var beamDirection = (RightController.transform.position - LeftController.transform.position).normalized;
+        //yield return new WaitForSeconds(0.1f);
+        
+        GameObject firstHitObject = null;
+        float radiusToCheck = 0.05f;        
+        RaycastHit[] hitObjects;
+
+        //check for objects, increasing radius as we go
+        bool destoryAll = true; //first check destroys all in path, subsequent only destroys first hit, not all as radius too wide
+        while (radiusToCheck < 1f)
+        {
+            Vector3 sphereRadiusLength = beamDirection * radiusToCheck;
+            hitObjects = Physics.SphereCastAll(LeftController.transform.position + sphereRadiusLength, radiusToCheck, beamDirection, 10f);            
+            foreach (var hitObject in hitObjects)
+            {
+                Enemy enemy = hitObject.collider.gameObject.GetComponentInParent<Enemy>();
+
+                if (enemy != null && !enemy.IsHit)
+                {
+                    if (firstHitObject == null)
+                    {
+                        firstHitObject = enemy.gameObject;                        
+                    }                    
+                    enemy.Hit();
+                    if (!destoryAll)
+                    {
+                        break; //we hit something using auto aim, stop checking other objects
+                    }
+                }
+            }
+
+            if (firstHitObject != null)
+            {
+                break; //we hit something, stop checking further away
+            }
+
+            destoryAll = false;
+            radiusToCheck += 0.05f;
+        }
+
+        if (firstHitObject != null)
+        {
+            beamDirection = (firstHitObject.transform.position - LeftController.transform.position).normalized;
+        }
         ActiveLaserBeam.transform.rotation = Quaternion.LookRotation(beamDirection);
         ActiveLaserBeam.gameObject.SetActive(true);
 
-        //yield return new WaitForSeconds(0.1f);
+        while (_msSinceBeam < 0.15f)
+        {
+            ActiveLaserBeam.transform.position += beamDirection * 10 * Time.deltaTime;
 
-        //while (_msSinceBeam < 0.15f)
-        //{
-        //    ActiveLaserBeam.transform.position += beamDirection * 10 * Time.deltaTime;
+            yield return null;
+        }
 
-        //    yield return null;
-        //}
+        //yield return new WaitForSeconds(0.2f);
 
-        yield return new WaitForSeconds(0.5f);
-
-        GameObject.Destroy(ActiveLaserBeam.gameObject);
+        if (ActiveLaserBeam.gameObject.activeSelf)
+        {
+            GameObject.Destroy(ActiveLaserBeam.gameObject);
+        }
     }
 
     public void StartGame()
     {
         IsStarted = true;
-        _sightLine = GameObject.Instantiate(SightLineSource);
-        _sightLine.SetActive(true);
+        //_sightLine = GameObject.Instantiate(SightLineSource);
+        //_sightLine.SetActive(true);
 
-        AudioManager.Instance.Play();
+        if (_destroyer != null)
+        {
+            if (_destroyer.GetType() == typeof(Enemy))
+            {
+                Destroy(((Enemy)_destroyer).gameObject);
+            }
+            else if (_destroyer.GetType() == typeof(Bullet))
+            {
+                ((Bullet)_destroyer).gameObject.SetActive(false);
+            }
+
+            _destroyer = null;
+        }
+        AudioManager.Instance.AudioSource.Play();
     }
 
     public void StopGame()
     {
         IsStarted = false;
-        Destroy(_sightLine);
+        AudioManager.Instance.AudioSource.Stop();
+        
+        foreach (var item in FindObjectsOfType<Enemy>())
+        {
+            if ((object)item != _destroyer)
+            {
+                Destroy(item.gameObject);
+            }
+        }
+
+        foreach (var item in FindObjectsOfType<Bullet>())
+        {
+            if ((object)item != _destroyer)
+            {
+                item.gameObject.SetActive(false);
+            }
+        }
     }
 
     public static Vector3 GetRandomPosition(float minRange, float maxRange)
@@ -178,8 +258,7 @@ public class GameManager : MonoBehaviour
         float number = UnityEngine.Random.Range(minRange, maxRange);
         if (blnAllowNegatives)
         {            
-            number *= (UnityEngine.Random.Range((int)-1, (int)2) > 0 ? 1 : -1);
-            Debug.Log(number);
+            number *= (UnityEngine.Random.Range((int)-1, (int)2) > 0 ? 1 : -1);            
         }
         return number;
     }

@@ -6,9 +6,9 @@ using UnityEngine;
 public class Bullet : MonoBehaviour
 {
     public Vector3 Direction { get; set; }
-    public static Bullet[] GreenBullets = new Bullet[1000];
-    public static Bullet[] RedBullets = new Bullet[1000];
-    public static Bullet[] BlueBullets = new Bullet[1000];
+    public static Bullet[] GreenBullets = new Bullet[10000];
+    public static Bullet[] RedBullets = new Bullet[10000];
+    public static Bullet[] BlueBullets = new Bullet[100000];
     public static int GreenBulletCount = 0;
     public static int RedBulletCount = 0;
     public static int BlueBulletCount = 0;
