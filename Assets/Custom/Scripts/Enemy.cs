@@ -42,12 +42,13 @@ public class Enemy : MonoBehaviour
         {
             if (GameManager.Instance.ActiveLaserBeam != null && GameManager.Instance.ActiveLaserBeam.isActiveAndEnabled && !_isHit)
             {
+                //this is wrong, only checking for middle of beam
                 var diff = transform.position - GameManager.Instance.ActiveLaserBeam.transform.position;
 
                 //Debug.Log(diff.magnitude);
                 if (diff.magnitude < 0.1)
                 {
-                    Hit();
+                    Explode();
                 }
             }
 
@@ -99,6 +100,7 @@ public class Enemy : MonoBehaviour
                     bullet.gameObject.SetActive(true);
                     bullet.gameObject.transform.position = transform.position;
                     bullet.Direction = (GameManager.Instance.UFO.transform.position - transform.position).normalized;
+                    bullet.gameObject.transform.rotation = Quaternion.LookRotation(bullet.Direction);
                 }
                 else
                 {
@@ -106,20 +108,10 @@ public class Enemy : MonoBehaviour
                 }
             }
 
-            switch (Type)
-            {
-                case EnemyType.Green:
-                    var vector = Quaternion.AngleAxis(-80, Vector3.up) * (GameManager.Instance.UFO.transform.position - transform.position);
-                    this.transform.position += vector.normalized * 0.5f * Time.deltaTime * GameManager.Instance.Speed;
-                    break;
-                case EnemyType.Red:
-                    this.transform.position += (GameManager.Instance.UFO.transform.position - transform.position).normalized * 0.2f * Time.deltaTime * GameManager.Instance.Speed;
-                    break;
-                case EnemyType.Blue:
-                    break;
-                default:
-                    break;
-            }
+            if (GameManager.Instance.IsOnBeat)
+            {                
+                StartCoroutine(Move());
+            }            
         }
     }
 
@@ -162,6 +154,38 @@ public class Enemy : MonoBehaviour
         }
 
         GameObject.Destroy(this.gameObject);
+    }
+
+    IEnumerator Move()
+    {
+        Vector3 vector;
+        float t = 0;
+
+        switch (Type)
+        {
+            case EnemyType.Green:
+                vector = Quaternion.AngleAxis(-80, Vector3.up) * (GameManager.Instance.UFO.transform.position - transform.position).normalized;                
+                while (t < 0.1)
+                {
+                    transform.position += vector * 1.5f * Time.deltaTime;
+                    t += Time.deltaTime;
+                    yield return new WaitForSeconds(0.01f);
+                }
+                break;
+            case EnemyType.Red:
+                vector = (GameManager.Instance.UFO.transform.position - transform.position).normalized;                
+                while (t < 0.1)
+                {
+                    transform.position += vector * 0.5f * Time.deltaTime;
+                    t += Time.deltaTime;
+                    yield return new WaitForSeconds(0.01f);
+                }
+                break;
+            case EnemyType.Blue:
+                break;
+            default:
+                break;
+        }
     }
 }
 

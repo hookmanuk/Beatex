@@ -26,6 +26,7 @@ public class GameManager : MonoBehaviour
     private float _msSinceEnemySpawn = 0;
     private float _msSinceShot = 0;
     public bool IsStarted { get; set; } = false;
+    public bool IsOnBeat { get; set; } = false;
     private GameObject _sightLine;
 
     public List<Enemy> EnemiesHit = new List<Enemy>();
@@ -72,12 +73,14 @@ public class GameManager : MonoBehaviour
 
             if (_msSinceBeam >= (60 / AudioManager.Instance.BPM * 1)) //every 1 beats
             {
+                IsOnBeat = true;
                 _msSinceBeam = 0;
                 ActiveLaserBeam = GameObject.Instantiate(LaserBeamSource);
                 StartCoroutine(ShootBeam());
             }
             else
             {
+                IsOnBeat = false;
                 _msSinceBeam += Time.deltaTime;
             }
 
@@ -136,12 +139,16 @@ public class GameManager : MonoBehaviour
         ActiveLaserBeam.transform.rotation = Quaternion.LookRotation(beamDirection);
         ActiveLaserBeam.gameObject.SetActive(true);
 
-        while (_msSinceBeam < 0.4)
-        {
-            ActiveLaserBeam.transform.position += beamDirection * 10 * Time.deltaTime;
-            
-            yield return null;
-        }
+        //yield return new WaitForSeconds(0.1f);
+
+        //while (_msSinceBeam < 0.15f)
+        //{
+        //    ActiveLaserBeam.transform.position += beamDirection * 10 * Time.deltaTime;
+
+        //    yield return null;
+        //}
+
+        yield return new WaitForSeconds(0.5f);
 
         GameObject.Destroy(ActiveLaserBeam.gameObject);
     }

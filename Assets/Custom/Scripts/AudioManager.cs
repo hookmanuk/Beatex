@@ -18,7 +18,7 @@ public class AudioManager : MonoBehaviour
     void Start()
     {
         _instance = this;
-        BPM = 113;
+        BPM = 120;
     }
 
     // Update is called once per frame

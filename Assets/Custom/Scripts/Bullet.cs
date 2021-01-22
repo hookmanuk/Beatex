@@ -16,13 +16,13 @@ public class Bullet : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        
+
     }
 
     // Update is called once per frame
     void Update()
     {
-        
+
     }
 
     private void FixedUpdate()
@@ -39,9 +39,22 @@ public class Bullet : MonoBehaviour
         {
             this.gameObject.SetActive(false);
         }
-        else
+        else if (GameManager.Instance.IsOnBeat)
         {
-            transform.position += Direction * 0.2f * Time.deltaTime * GameManager.Instance.Speed;
+            //transform.position += Direction * 0.2f * Time.deltaTime * GameManager.Instance.Speed;            
+            //transform.position += Direction * 0.1f * GameManager.Instance.Speed;
+            StartCoroutine(Move());
+        }
+    }
+
+    IEnumerator Move()
+    {
+        float t = 0;
+        while (t < 0.1)
+        {
+            transform.position += Direction * 1f * Time.deltaTime;
+            t += Time.deltaTime;
+            yield return new WaitForSeconds(0.01f);
         }
     }
 }
