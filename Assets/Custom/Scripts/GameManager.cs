@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.XR;
 using System;
 using UnityEngine.InputSystem.XR;
+using UnityEngine.XR.Interaction.Toolkit;
 
 public class GameManager : MonoBehaviour
 {
@@ -19,6 +20,7 @@ public class GameManager : MonoBehaviour
     public Enemy EnemyRedSource;
     public Enemy EnemyGreenSource;
     public Enemy EnemyBlueSource;
+    public GameObject FloorPlane;
     public LaserBeam ActiveLaserBeam {get; set;}
     public float Speed = 1f;
 
@@ -51,6 +53,13 @@ public class GameManager : MonoBehaviour
             Bullet.GreenBullets[i] = GameObject.Instantiate(GameManager.Instance.GreenBulletSource);
             Bullet.RedBullets[i] = GameObject.Instantiate(GameManager.Instance.RedBulletSource);
         }
+
+        var col = FloorPlane.GetComponent<MeshRenderer>().material.color;
+        float factor = Mathf.Pow(2, 0.5f);
+        //float factor = intensity;
+        FloorPlane.GetComponent<MeshRenderer>().material.SetColor("_Color", new Color(col.r * factor, col.g * factor, col.b * factor));
+        
+        //GetComponentInChildren<Camera>().
     }
 
     // Update is called once per frame
