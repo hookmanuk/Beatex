@@ -22,12 +22,15 @@ public class GameManager : MonoBehaviour
     public Enemy EnemyRedSource;
     public Enemy EnemyGreenSource;
     public Enemy EnemyBlueSource;
+    public Mothership EnemyMothershipSource;
     public GameObject FloorPlane;
     public GameObject Camera;
     public GameObject TestBehindArea;
     public VolumeProfile VolumeProfile;
     public AudioSource WaveAudioSource;
+    public bool ResetToStartOnDeath;
     public LaserBeam ActiveLaserBeam {get; set;}
+    private int _enemiesToSpawn = 3;
     public float Speed = 1f;
 
     private float _msSinceBeam = 0;
@@ -177,10 +180,10 @@ public class GameManager : MonoBehaviour
         if (_waveWarnsPlayed == 0 && _msSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 11)) //on 16th beat
         {
             //Calculate positions for spawns
-            _spawnPositions = new Vector3[8];
+            _spawnPositions = new Vector3[_enemiesToSpawn];
             Vector3 centralSpawnPoint = LeftController.transform.position + GetRandomPosition(1,2);
 
-            for (int i = 0; i < 8; i++)
+            for (int i = 0; i < _enemiesToSpawn; i++)
             {
                 _spawnPositions[i] = UnityEngine.Random.insideUnitSphere * 1.25f + centralSpawnPoint;
             }
@@ -192,27 +195,27 @@ public class GameManager : MonoBehaviour
             _waveWarnsPlayed++;
         }
 
-        if (_waveWarnsPlayed == 1 && _msSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 13)) //on 18th beat
+        if (_waveWarnsPlayed == 1 && _msSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 13)) //on 13th beat
         {
             AudioManager.Instance.PlayWaveWarn(WaveAudioSource);
             _waveWarnsPlayed++;
         }
 
-        if (_waveWarnsPlayed == 2 && _msSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 15)) //on 18th beat
+        if (_waveWarnsPlayed == 2 && _msSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 15)) //on 15th beat
         {
 
             AudioManager.Instance.PlayWaveStart(WaveAudioSource);
             _waveWarnsPlayed++;
         }
 
-        if (_msSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 16)) //every 20 beats
+        if (_msSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 16)) //every 16 beats
         {
             _msSinceEnemySpawn = 0;
             _waveWarnsPlayed = 0;
             Enemy enemySpawn = null;
 
-            //spawn 8 enemies
-            for (int i = 0; i < 8; i++)
+            //spawn enemies
+            for (int i = 0; i < _enemiesToSpawn; i++)
             {
                 switch (UnityEngine.Random.Range((int)0, (int)3).ToString())
                 {
@@ -232,7 +235,16 @@ public class GameManager : MonoBehaviour
                 enemySpawn = GameObject.Instantiate(enemySpawn);
                 enemySpawn.gameObject.SetActive(true);
                 enemySpawn.gameObject.transform.position = _spawnPositions[i];
-            }            
+            }
+
+            if (_enemiesToSpawn >= 5)
+            {
+                Mothership mothership = Instantiate(EnemyMothershipSource);
+                mothership.gameObject.SetActive(true);
+                mothership.gameObject.transform.position = WaveAudioSource.gameObject.transform.position;
+            }
+
+            _enemiesToSpawn++;
         }
         else
         {
@@ -260,6 +272,10 @@ public class GameManager : MonoBehaviour
             {
                 Enemy enemy = hitObject.collider.gameObject.GetComponentInParent<Enemy>();
 
+                if (hitObject.collider.gameObject.GetComponentInParent<Mothership>() != null)
+                {
+                    enemy = hitObject.collider.gameObject.GetComponentInParent<Mothership>();
+                }
                 if (enemy != null && !enemy.IsHit)
                 {
                     if (firstHitObject == null)
@@ -292,7 +308,7 @@ public class GameManager : MonoBehaviour
 
         while (_msSinceBeam < 0.15f)
         {
-            ActiveLaserBeam.transform.position += beamDirection * 10 * Time.deltaTime;
+            ActiveLaserBeam.transform.position += beamDirection * 20 * Time.deltaTime;
 
             yield return null;
         }
@@ -311,7 +327,11 @@ public class GameManager : MonoBehaviour
         //_sightLine = GameObject.Instantiate(SightLineSource);
         //_sightLine.SetActive(true);
         _msSinceBeam = 0;
-        _msSinceEnemySpawn = 0;    
+        _msSinceEnemySpawn = 0;
+        if (ResetToStartOnDeath)
+        {
+            _enemiesToSpawn = 3;
+        }
 
         try
         {

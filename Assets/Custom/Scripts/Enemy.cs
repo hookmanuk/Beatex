@@ -8,8 +8,8 @@ public class Enemy : MonoBehaviour
     public ParticleSystem DeathParticleSystem;    
     private float _msSinceShot = 0;
     public bool IsHit = false;
-    private float _hitRate;
-    private int _health = 1;
+    protected float _hitRate;
+    protected int _health = 1;
 
     private Bullet _bulletSource;
 
@@ -29,8 +29,8 @@ public class Enemy : MonoBehaviour
                 break;
             case EnemyType.Blue:
                 _hitRate = 1f;
-                _health = 3;
-                break;
+                _health = 2;
+                break;          
             default:
                 break;
         }
@@ -248,5 +248,6 @@ public enum EnemyType
 {
     Green,
     Red,
-    Blue
+    Blue,
+    Mothership
 }
