@@ -5,12 +5,14 @@ using UnityEngine;
 public class Enemy : MonoBehaviour
 {
     public EnemyType Type;
+    public ParticleSystem DeathParticleSystem;
     private float _msSinceShot = 0;
     public bool IsHit = false;
     private float _hitRate;
     private int _health = 1;
 
     private Bullet _bulletSource;
+
 
     // Start is called before the first frame update
     void Start()
@@ -174,29 +176,37 @@ public class Enemy : MonoBehaviour
         float t = 0;
         float intensity = 5f;
 
-        var material = GetComponentInChildren<MeshRenderer>().material;
-        var col = material.GetColor("_EmissionColor");
+        //var material = GetComponentInChildren<MeshRenderer>().material;
+        //var col = material.GetColor("_EmissionColor");
 
-        while (t < 0.07f)
+        //while (t < 0.07f)
+        //{
+        //    intensity = t / 0.07f * 5;
+        //    float factor = Mathf.Pow(2, intensity);
+        //    //float factor = intensity;
+        //    material.SetColor("_EmissionColor", new Color(col.r * factor, col.g * factor, col.b * factor));
+        //    yield return new WaitForSeconds(0.01f);
+        //    t += 0.01f;
+        //}
+
+        //while (t < 0.2f)
+        //{
+        //    intensity = 5 - t / 0.2f * 5;
+        //    float factor = Mathf.Pow(2, intensity);
+        //    material.SetColor("_EmissionColor", new Color(col.r * factor, col.g * factor, col.b * factor));
+        //    yield return new WaitForSeconds(0.01f);
+        //    t += 0.01f;
+        //}
+
+        if (DeathParticleSystem != null)
         {
-            intensity = t / 0.07f * 5;
-            float factor = Mathf.Pow(2, intensity);
-            //float factor = intensity;
-            material.SetColor("_EmissionColor", new Color(col.r * factor, col.g * factor, col.b * factor));
-            yield return new WaitForSeconds(0.01f);
-            t += 0.01f;
+            DeathParticleSystem.Play();
         }
+        GetComponentInChildren<MeshRenderer>().enabled = false;
 
-        while (t < 0.2f)
-        {
-            intensity = 5 - t / 0.2f * 5;
-            float factor = Mathf.Pow(2, intensity);
-            material.SetColor("_EmissionColor", new Color(col.r * factor, col.g * factor, col.b * factor));
-            yield return new WaitForSeconds(0.01f);
-            t += 0.01f;
-        }
+        yield return new WaitForSeconds(1f);
 
-        GameObject.Destroy(this.gameObject);
+        GameObject.Destroy(this.gameObject);        
     }
 
     IEnumerator Move()
