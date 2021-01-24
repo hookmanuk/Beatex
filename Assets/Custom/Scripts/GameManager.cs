@@ -5,6 +5,8 @@ using UnityEngine.XR;
 using System;
 using UnityEngine.InputSystem.XR;
 using UnityEngine.XR.Interaction.Toolkit;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 
 public class GameManager : MonoBehaviour
 {
@@ -21,6 +23,9 @@ public class GameManager : MonoBehaviour
     public Enemy EnemyGreenSource;
     public Enemy EnemyBlueSource;
     public GameObject FloorPlane;
+    public GameObject Camera;
+    public GameObject TestBehindArea;
+    public VolumeProfile VolumeProfile; 
     public LaserBeam ActiveLaserBeam {get; set;}
     public float Speed = 1f;
 
@@ -30,6 +35,7 @@ public class GameManager : MonoBehaviour
     public bool IsOnBeat { get; set; } = false;
     private GameObject _sightLine;
     private object _destroyer = null;
+    private Vignette _vignette;
 
     public List<Enemy> EnemiesHit = new List<Enemy>();
 
@@ -58,8 +64,10 @@ public class GameManager : MonoBehaviour
         float factor = Mathf.Pow(2, 0.5f);
         //float factor = intensity;
         FloorPlane.GetComponent<MeshRenderer>().material.SetColor("_Color", new Color(col.r * factor, col.g * factor, col.b * factor));
-        
-        //GetComponentInChildren<Camera>().
+
+        //GetComponentInChildren<Camera>().                
+
+        if (!VolumeProfile.TryGet(out _vignette)) throw new System.NullReferenceException(nameof(_vignette));        
     }
 
     // Update is called once per frame
@@ -69,82 +77,126 @@ public class GameManager : MonoBehaviour
     }  
 
     private void FixedUpdate()
-    {        
-        if (XRDevice.refreshRate != RefreshRate)
-        {
-            RefreshRate = XRDevice.refreshRate;
-            Time.fixedDeltaTime = (float)Math.Round(1 / XRDevice.refreshRate, 8);
-        }
+    {
+        RefreshRateCheck();
 
-        if (GameManager.Instance.IsStarted)
-        {
-            Collider[] objectsHitPlayer = Physics.OverlapSphere(LeftController.transform.position, 0.04f);
-            foreach (var item in objectsHitPlayer)
-            {
-                if (item.gameObject.GetComponentInParent<Enemy>() != null)
-                {
-                    //hit by enemy
-                    _destroyer = item.gameObject.GetComponentInParent<Enemy>();                    
-                }
-        
-                if (item.gameObject.GetComponent<Bullet>() != null)
-                {
-                    //hit by bullet
-                    _destroyer = item.gameObject.GetComponent<Bullet>();                    
-                }
-            }
-            if (_destroyer != null)
+        if (IsStarted)
+        {            
+            if (EnemyHit())
             {
                 StopGame();
             }
             else
             {
+                RearVignetteCheck();
 
-                var lookDirection = (RightController.transform.position - LeftController.transform.position).normalized;
+                BeamShootCheck();
 
-                if (_msSinceBeam >= (60 / AudioManager.Instance.BPM * 1)) //every 1 beats
-                {
-                    IsOnBeat = true;
-                    _msSinceBeam = 0;
-                    ActiveLaserBeam = GameObject.Instantiate(LaserBeamSource);
-                    StartCoroutine(ShootBeam());
-                }
-                else
-                {
-                    IsOnBeat = false;
-                    _msSinceBeam += Time.deltaTime;
-                }
-
-                if (_msSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 2)) //every 2 beats
-                {
-                    _msSinceEnemySpawn = 0;
-                    Enemy enemySpawn = null;
-                    switch (UnityEngine.Random.Range((int)0, (int)3).ToString())
-                    {
-                        case "0":
-                            enemySpawn = EnemyRedSource;
-                            break;
-                        case "1":
-                            enemySpawn = EnemyGreenSource;
-                            break;
-                        case "2":
-                            enemySpawn = EnemyBlueSource;
-                            break;
-                        default:
-                            break;
-                    }
-                    enemySpawn = GameObject.Instantiate(enemySpawn);
-                    enemySpawn.gameObject.SetActive(true);
-                    enemySpawn.gameObject.transform.position = LeftController.transform.position + GetRandomPosition(1, 2);
-                }
-                else
-                {
-                    _msSinceEnemySpawn += Time.deltaTime * GameManager.Instance.Speed;
-                }
-
-                //_sightLine.transform.position = LeftController.transform.position;
-                //_sightLine.transform.rotation = Quaternion.LookRotation(lookDirection);
+                EnemySpawnCheck();
             }
+        }
+    }
+
+    private void RefreshRateCheck()
+    {
+        if (XRDevice.refreshRate != RefreshRate)
+        {
+            RefreshRate = XRDevice.refreshRate;
+            Time.fixedDeltaTime = (float)Math.Round(1 / XRDevice.refreshRate, 8);
+        }
+    }
+
+    private bool EnemyHit()
+    {
+        _destroyer = null;
+
+        Collider[] objectsHitPlayer = Physics.OverlapSphere(LeftController.transform.position, 0.04f);
+        foreach (var item in objectsHitPlayer)
+        {
+            if (item.gameObject.GetComponentInParent<Enemy>() != null)
+            {
+                //hit by enemy
+                _destroyer = item.gameObject.GetComponentInParent<Enemy>();
+            }
+
+            if (item.gameObject.GetComponent<Bullet>() != null)
+            {
+                //hit by bullet
+                _destroyer = item.gameObject.GetComponent<Bullet>();
+            }
+        }
+
+        return (_destroyer != null);
+    }
+
+    private void RearVignetteCheck()
+    {
+        Collider[] objectsBehind = Physics.OverlapBox(LeftController.transform.position - Camera.transform.forward.normalized * 0.5f, new Vector3(0.75f, 0.45f, 0.45f), Quaternion.LookRotation(Camera.transform.forward, Vector3.up));
+
+        float closestDistance = 999f;
+        foreach (var item in objectsBehind)
+        {
+            if (item.gameObject.GetComponentInParent<Enemy>())
+            {
+                var itemDistance = (LeftController.transform.position - item.ClosestPoint(LeftController.transform.position)).magnitude;
+                //Debug.Log(item.name + " " + itemDistance);
+
+                if (itemDistance < closestDistance)
+                {
+                    closestDistance = itemDistance;
+                }
+            }
+        }
+
+        float vignetteRatio = (closestDistance < 1 ? (1f - closestDistance) : 0);
+
+        _vignette.intensity.Override(1f * vignetteRatio);
+    }
+
+    private void BeamShootCheck()
+    {
+        if (_msSinceBeam >= (60 / AudioManager.Instance.BPM * 1)) //every 1 beats
+        {
+            IsOnBeat = true;
+            _msSinceBeam = 0;
+            ActiveLaserBeam = GameObject.Instantiate(LaserBeamSource);
+            StartCoroutine(ShootBeam());
+        }
+        else
+        {
+            IsOnBeat = false;
+            _msSinceBeam += Time.deltaTime;
+        }
+    }
+
+    private void EnemySpawnCheck()
+    {
+        if (_msSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 2)) //every 2 beats
+        {
+            _msSinceEnemySpawn = 0;
+            Enemy enemySpawn = null;
+            switch (UnityEngine.Random.Range((int)0, (int)3).ToString())
+            {
+                case "0":
+                    enemySpawn = EnemyRedSource;
+                    break;
+                case "1":
+                    enemySpawn = EnemyGreenSource;
+                    break;
+                case "2":
+                    enemySpawn = EnemyBlueSource;
+                    break;
+                default:
+                    break;
+            }
+
+            enemySpawn = GameObject.Instantiate(enemySpawn);
+            enemySpawn.gameObject.SetActive(true);
+            enemySpawn.gameObject.transform.position = LeftController.transform.position + GetRandomPosition(1, 2);
+        }
+        else
+        {
+            _msSinceEnemySpawn += Time.deltaTime * GameManager.Instance.Speed;
         }
     }
 
