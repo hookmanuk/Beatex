@@ -25,7 +25,8 @@ public class GameManager : MonoBehaviour
     public GameObject FloorPlane;
     public GameObject Camera;
     public GameObject TestBehindArea;
-    public VolumeProfile VolumeProfile; 
+    public VolumeProfile VolumeProfile;
+    public AudioSource WaveAudioSource;
     public LaserBeam ActiveLaserBeam {get; set;}
     public float Speed = 1f;
 
@@ -36,6 +37,8 @@ public class GameManager : MonoBehaviour
     private GameObject _sightLine;
     private object _destroyer = null;
     private Vignette _vignette;
+    private int _waveWarnsPlayed = 0;
+    private Vector3[] _spawnPositions = null;
 
     public List<Enemy> EnemiesHit = new List<Enemy>();
 
@@ -171,28 +174,65 @@ public class GameManager : MonoBehaviour
 
     private void EnemySpawnCheck()
     {
-        if (_msSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 2)) //every 2 beats
+        if (_waveWarnsPlayed == 0 && _msSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 11)) //on 16th beat
         {
-            _msSinceEnemySpawn = 0;
-            Enemy enemySpawn = null;
-            switch (UnityEngine.Random.Range((int)0, (int)3).ToString())
+            //Calculate positions for spawns
+            _spawnPositions = new Vector3[8];
+            Vector3 centralSpawnPoint = LeftController.transform.position + GetRandomPosition(1,2);
+
+            for (int i = 0; i < 8; i++)
             {
-                case "0":
-                    enemySpawn = EnemyRedSource;
-                    break;
-                case "1":
-                    enemySpawn = EnemyGreenSource;
-                    break;
-                case "2":
-                    enemySpawn = EnemyBlueSource;
-                    break;
-                default:
-                    break;
+                _spawnPositions[i] = UnityEngine.Random.insideUnitSphere * 1.25f + centralSpawnPoint;
             }
 
-            enemySpawn = GameObject.Instantiate(enemySpawn);
-            enemySpawn.gameObject.SetActive(true);
-            enemySpawn.gameObject.transform.position = LeftController.transform.position + GetRandomPosition(1, 2);
+            //set the audio source to play where the wave will spawn
+            WaveAudioSource.gameObject.transform.position = centralSpawnPoint;
+
+            AudioManager.Instance.PlayWaveWarn(WaveAudioSource);
+            _waveWarnsPlayed++;
+        }
+
+        if (_waveWarnsPlayed == 1 && _msSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 13)) //on 18th beat
+        {
+            AudioManager.Instance.PlayWaveWarn(WaveAudioSource);
+            _waveWarnsPlayed++;
+        }
+
+        if (_waveWarnsPlayed == 2 && _msSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 15)) //on 18th beat
+        {
+
+            AudioManager.Instance.PlayWaveStart(WaveAudioSource);
+            _waveWarnsPlayed++;
+        }
+
+        if (_msSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 16)) //every 20 beats
+        {
+            _msSinceEnemySpawn = 0;
+            _waveWarnsPlayed = 0;
+            Enemy enemySpawn = null;
+
+            //spawn 8 enemies
+            for (int i = 0; i < 8; i++)
+            {
+                switch (UnityEngine.Random.Range((int)0, (int)3).ToString())
+                {
+                    case "0":
+                        enemySpawn = EnemyRedSource;
+                        break;
+                    case "1":
+                        enemySpawn = EnemyGreenSource;
+                        break;
+                    case "2":
+                        enemySpawn = EnemyBlueSource;
+                        break;
+                    default:
+                        break;
+                }
+
+                enemySpawn = GameObject.Instantiate(enemySpawn);
+                enemySpawn.gameObject.SetActive(true);
+                enemySpawn.gameObject.transform.position = _spawnPositions[i];
+            }            
         }
         else
         {
@@ -270,27 +310,37 @@ public class GameManager : MonoBehaviour
         IsStarted = true;
         //_sightLine = GameObject.Instantiate(SightLineSource);
         //_sightLine.SetActive(true);
+        _msSinceBeam = 0;
+        _msSinceEnemySpawn = 0;    
 
-        if (_destroyer != null)
+        try
         {
-            if (_destroyer.GetType() == typeof(Enemy))
+            if (_destroyer != null)
             {
-                Destroy(((Enemy)_destroyer).gameObject);
-            }
-            else if (_destroyer.GetType() == typeof(Bullet))
-            {
-                ((Bullet)_destroyer).gameObject.SetActive(false);
-            }
+                if (_destroyer.GetType() == typeof(Enemy))
+                {
+                    Destroy(((Enemy)_destroyer).gameObject);
+                }
+                else if (_destroyer.GetType() == typeof(Bullet))
+                {
+                    ((Bullet)_destroyer).gameObject.SetActive(false);
+                }
 
-            _destroyer = null;
+                _destroyer = null;
+            }
         }
-        AudioManager.Instance.AudioSource.Play();
+        catch (Exception)
+        {
+            //sometimes the _destroyer is already destroyed, shrug
+        }
+        
+        AudioManager.Instance.MusicSource.Play();
     }
 
     public void StopGame()
     {
         IsStarted = false;
-        AudioManager.Instance.AudioSource.Stop();
+        AudioManager.Instance.MusicSource.Stop();
         
         foreach (var item in FindObjectsOfType<Enemy>())
         {

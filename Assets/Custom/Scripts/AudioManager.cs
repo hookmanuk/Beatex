@@ -5,7 +5,12 @@ using UnityEngine;
 public class AudioManager : MonoBehaviour
 {
     public float BPM { get; set; }
-    public AudioSource AudioSource;
+    public AudioSource MusicSource;
+    public AudioSource SFXSource;
+    public AudioClip EnemyBirth;
+    public AudioClip EnemyDeath;
+    public AudioClip WaveWarn;
+    public AudioClip WaveStart;
 
     private static AudioManager _instance;
     public static AudioManager Instance {
@@ -26,15 +31,14 @@ public class AudioManager : MonoBehaviour
     {
         
     }
-
-    public void Play()
+    
+    public void PlayWaveWarn(AudioSource enemySource)
     {
-        StartCoroutine(WaitThenPlay(0.01f));        
+        enemySource.PlayOneShot(WaveWarn);
     }
 
-    IEnumerator WaitThenPlay(float waitSecs)
+    public void PlayWaveStart(AudioSource enemySource)
     {
-        yield return new WaitForSeconds(waitSecs);
-        AudioSource.Play();
-    }    
+        enemySource.PlayOneShot(WaveStart);
+    }
 }

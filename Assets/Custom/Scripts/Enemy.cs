@@ -5,7 +5,7 @@ using UnityEngine;
 public class Enemy : MonoBehaviour
 {
     public EnemyType Type;
-    public ParticleSystem DeathParticleSystem;
+    public ParticleSystem DeathParticleSystem;    
     private float _msSinceShot = 0;
     public bool IsHit = false;
     private float _hitRate;
@@ -34,6 +34,8 @@ public class Enemy : MonoBehaviour
             default:
                 break;
         }
+
+        //GetComponent<AudioSource>().PlayOneShot(AudioManager.Instance.EnemyBirth);
     }
 
     // Update is called once per frame
@@ -140,8 +142,7 @@ public class Enemy : MonoBehaviour
         _health -= 1;
         if (_health == 0)
         { 
-            IsHit = true;
-            GetComponent<AudioSource>().Play();
+            IsHit = true;            
             StartCoroutine(HitDead());
         }
         else
@@ -176,6 +177,7 @@ public class Enemy : MonoBehaviour
         float t = 0;
         float intensity = 5f;
 
+        GetComponent<AudioSource>().PlayOneShot(AudioManager.Instance.EnemyDeath);
         //var material = GetComponentInChildren<MeshRenderer>().material;
         //var col = material.GetColor("_EmissionColor");
 
