@@ -11,6 +11,7 @@ public class AudioManager : MonoBehaviour
     public AudioClip EnemyDeath;
     public AudioClip WaveWarn;
     public AudioClip WaveStart;
+    public AudioClip[] Waves;
 
     private static AudioManager _instance;
     public static AudioManager Instance {
@@ -32,9 +33,17 @@ public class AudioManager : MonoBehaviour
         
     }
     
-    public void PlayWaveWarn(AudioSource enemySource)
+    public void PlayWaveNo()
     {
-        enemySource.PlayOneShot(WaveWarn);
+        if (GameManager.Instance.Wave < 15)
+        {
+            SFXSource.PlayOneShot(Waves[GameManager.Instance.Wave]);
+        }        
+    }
+
+    public void PlayWaveWarn(AudioSource enemySource)
+    {        
+        enemySource.PlayOneShot(WaveWarn);        
     }
 
     public void PlayWaveStart(AudioSource enemySource)

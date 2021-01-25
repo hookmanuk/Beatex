@@ -18,7 +18,7 @@ public class GameManager : MonoBehaviour
     public GameObject LeftController;
     public GameObject RightController;
     public GameObject SightLineSource;
-    public GameObject UFO;
+    public UFO UFO;
     public Enemy EnemyRedSource;
     public Enemy EnemyGreenSource;
     public Enemy EnemyBlueSource;
@@ -27,9 +27,10 @@ public class GameManager : MonoBehaviour
     public GameObject Camera;
     public GameObject TestBehindArea;
     public VolumeProfile VolumeProfile;
-    public AudioSource WaveAudioSource;
+    public AudioSource WaveAudioSource;    
     public bool ResetToStartOnDeath;
     public LaserBeam ActiveLaserBeam {get; set;}
+    public int Wave { get; set; } = 0;
     private int _enemiesToSpawn = 3;
     public float Speed = 1f;
 
@@ -177,7 +178,7 @@ public class GameManager : MonoBehaviour
 
     private void EnemySpawnCheck()
     {
-        if (_waveWarnsPlayed == 0 && _msSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 11)) //on 16th beat
+        if (_waveWarnsPlayed == 0 && _msSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 11)) //on 11th beat
         {
             //Calculate positions for spawns
             _spawnPositions = new Vector3[_enemiesToSpawn];
@@ -191,7 +192,7 @@ public class GameManager : MonoBehaviour
             //set the audio source to play where the wave will spawn
             WaveAudioSource.gameObject.transform.position = centralSpawnPoint;
 
-            AudioManager.Instance.PlayWaveWarn(WaveAudioSource);
+            AudioManager.Instance.PlayWaveWarn(WaveAudioSource);            
             _waveWarnsPlayed++;
         }
 
@@ -239,12 +240,18 @@ public class GameManager : MonoBehaviour
 
             if (_enemiesToSpawn >= 5)
             {
-                Mothership mothership = Instantiate(EnemyMothershipSource);
-                mothership.gameObject.SetActive(true);
-                mothership.gameObject.transform.position = WaveAudioSource.gameObject.transform.position;
+                if (Math.IEEERemainder(_enemiesToSpawn - 5, 2) == 0)
+                {
+                    Mothership mothership = Instantiate(EnemyMothershipSource);
+                    mothership.gameObject.SetActive(true);
+                    mothership.gameObject.transform.position = WaveAudioSource.gameObject.transform.position;
+                }
             }
 
             _enemiesToSpawn++;
+
+            AudioManager.Instance.PlayWaveNo();
+            Wave++;
         }
         else
         {
@@ -324,6 +331,11 @@ public class GameManager : MonoBehaviour
     public void StartGame()
     {
         IsStarted = true;
+        if (RightController.GetComponentInChildren<Controller>() != null)
+        {
+            RightController.GetComponentInChildren<Controller>().gameObject.SetActive(false);
+        }
+        
         //_sightLine = GameObject.Instantiate(SightLineSource);
         //_sightLine.SetActive(true);
         _msSinceBeam = 0;
