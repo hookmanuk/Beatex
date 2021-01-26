@@ -28,7 +28,8 @@ public class GameManager : MonoBehaviour
     public GameObject TestBehindArea;
     public VolumeProfile VolumeProfile;
     public AudioSource WaveAudioSource;    
-    public bool ResetToStartOnDeath;
+    public bool ResetToStartOnDeath = true;
+    public bool DebugPlay;
     public LaserBeam ActiveLaserBeam {get; set;}
     public int Wave { get; set; } = 0;
     private int _enemiesToSpawn = 3;
@@ -75,6 +76,11 @@ public class GameManager : MonoBehaviour
         //GetComponentInChildren<Camera>().                
 
         if (!VolumeProfile.TryGet(out _vignette)) throw new System.NullReferenceException(nameof(_vignette));        
+
+        if (DebugPlay)
+        {
+            StartGame();
+        }
     }
 
     // Update is called once per frame
@@ -371,22 +377,25 @@ public class GameManager : MonoBehaviour
 
     public void StopGame()
     {
-        IsStarted = false;
-        AudioManager.Instance.MusicSource.Stop();
-        
-        foreach (var item in FindObjectsOfType<Enemy>())
+        if (!DebugPlay)
         {
-            if ((object)item != _destroyer)
-            {
-                Destroy(item.gameObject);
-            }
-        }
+            IsStarted = false;
+            AudioManager.Instance.MusicSource.Stop();
 
-        foreach (var item in FindObjectsOfType<Bullet>())
-        {
-            if ((object)item != _destroyer)
+            foreach (var item in FindObjectsOfType<Enemy>())
             {
-                item.gameObject.SetActive(false);
+                if ((object)item != _destroyer)
+                {
+                    Destroy(item.gameObject);
+                }
+            }
+
+            foreach (var item in FindObjectsOfType<Bullet>())
+            {
+                if ((object)item != _destroyer)
+                {
+                    item.gameObject.SetActive(false);
+                }
             }
         }
     }
