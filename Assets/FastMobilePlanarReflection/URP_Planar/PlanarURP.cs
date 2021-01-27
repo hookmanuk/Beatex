@@ -69,6 +69,7 @@
             lwrpCamData.renderShadows = false;
             lwrpCamData.requiresColorOption = CameraOverrideOption.Off;
             lwrpCamData.requiresDepthOption = CameraOverrideOption.Off;
+            reflectionCamera.farClipPlane = 1f;
             reflectionCamera.enabled = false;
             reflectionCamera.transform.position = transform.position;
             reflectionCamera.transform.rotation = transform.rotation;
@@ -111,7 +112,9 @@
             posistion = transform.position;
             normal = transform.up;
 
-            reflectionCamera.clearFlags = cam.clearFlags;
+            //MJH change to disable skybox
+            //reflectionCamera.clearFlags = cam.clearFlags;
+            reflectionCamera.clearFlags = CameraClearFlags.Color;
             reflectionCamera.backgroundColor = cam.backgroundColor;
             reflectionCamera.farClipPlane = cam.farClipPlane;
             reflectionCamera.nearClipPlane = cam.nearClipPlane;
