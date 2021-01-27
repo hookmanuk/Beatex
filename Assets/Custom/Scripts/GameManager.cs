@@ -7,6 +7,7 @@ using UnityEngine.InputSystem.XR;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
+using MText;
 
 public class GameManager : MonoBehaviour
 {
@@ -27,7 +28,8 @@ public class GameManager : MonoBehaviour
     public GameObject Camera;
     public GameObject TestBehindArea;
     public VolumeProfile VolumeProfile;
-    public AudioSource WaveAudioSource;    
+    public AudioSource WaveAudioSource;
+    public Modular3DText Modular3DText;
     public bool ResetToStartOnDeath = true;
     public bool DebugPlay;
     public LaserBeam ActiveLaserBeam {get; set;}
@@ -44,6 +46,7 @@ public class GameManager : MonoBehaviour
     private Vignette _vignette;
     private int _waveWarnsPlayed = 0;
     private Vector3[] _spawnPositions = null;
+    public int ComboMultiplier = 0;
 
     public List<Enemy> EnemiesHit = new List<Enemy>();
 
@@ -61,12 +64,12 @@ public class GameManager : MonoBehaviour
     {
         _instance = this;
 
-        for (int i = 0; i < 1000; i++)
-        {
-            Bullet.BlueBullets[i] = GameObject.Instantiate(GameManager.Instance.BlueBulletSource);
-            Bullet.GreenBullets[i] = GameObject.Instantiate(GameManager.Instance.GreenBulletSource);
-            Bullet.RedBullets[i] = GameObject.Instantiate(GameManager.Instance.RedBulletSource);
-        }
+        //for (int i = 0; i < 1000; i++)
+        //{
+        //    Bullet.BlueBullets[i] = GameObject.Instantiate(GameManager.Instance.BlueBulletSource);
+        //    Bullet.GreenBullets[i] = GameObject.Instantiate(GameManager.Instance.GreenBulletSource);
+        //    Bullet.RedBullets[i] = GameObject.Instantiate(GameManager.Instance.RedBulletSource);
+        //}
 
         var col = FloorPlane.GetComponent<MeshRenderer>().material.color;
         float factor = Mathf.Pow(2, 0.5f);
@@ -82,6 +85,35 @@ public class GameManager : MonoBehaviour
             StartGame();
         }
     }
+
+    //code for boundaries... untested, draw platform to size of boundaries
+    //private void Awake()
+    //{
+    //    List<XRInputSubsystem> list = new List<XRInputSubsystem>();
+    //    SubsystemManager.GetInstances<XRInputSubsystem>(list);
+    //    foreach (var sSystem in list)
+    //    {
+    //        if (sSystem.running)
+    //        {
+    //            _inputSubSystem = sSystem;
+    //            break;
+    //        }
+    //    }
+    //    _inputSubSystem.boundaryChanged += RefreshBoundaries;
+    //}
+
+    //private void RefreshBoundaries(XRInputSubsystem inputSubsystem)
+    //{
+    //    List<Vector3> currentBoundaries = new List<Vector3>();
+    //    //if (UnityEngine.Experimental.XR.Boundary.TryGetGeometry(currentBoundaries))
+    //    if (inputSubsystem.TryGetBoundaryPoints(currentBoundaries))
+    //    {
+    //        //got boundaries, keep only those which didn't change.
+    //        if (currentBoundaries != null && (_boundaries != currentBoundaries || _boundaries.Count != currentBoundaries.Count))
+    //            _boundaries = currentBoundaries;
+    //        DrawWalls();
+    //    }
+    //}
 
     // Update is called once per frame
     void Update()
@@ -130,13 +162,7 @@ public class GameManager : MonoBehaviour
             {
                 //hit by enemy
                 _destroyer = item.gameObject.GetComponentInParent<Enemy>();
-            }
-
-            if (item.gameObject.GetComponent<Bullet>() != null)
-            {
-                //hit by bullet
-                _destroyer = item.gameObject.GetComponent<Bullet>();
-            }
+            }           
         }
 
         return (_destroyer != null);
@@ -255,14 +281,41 @@ public class GameManager : MonoBehaviour
             }
 
             _enemiesToSpawn++;
-
+            
             AudioManager.Instance.PlayWaveNo();
             Wave++;
+            StartCoroutine(ShowText("Wave " + Wave.ToString()));
         }
         else
         {
             _msSinceEnemySpawn += Time.deltaTime * GameManager.Instance.Speed;
         }
+    }
+
+    IEnumerator ShowText(string text)
+    {
+        float t = 0;
+        Vector3 startPosition;
+        Vector3 startForwardCamera;
+        Modular3DText modular3DText;
+
+        modular3DText = Instantiate(Modular3DText);
+
+        modular3DText.gameObject.SetActive(true);        
+        modular3DText.UpdateText(text);
+
+        startForwardCamera = Camera.transform.forward.normalized * 2;
+        startPosition = Camera.transform.position + startForwardCamera;
+        modular3DText.transform.rotation = Quaternion.LookRotation(Camera.transform.forward);
+
+        while (t < 1.5f)
+        {
+            modular3DText.transform.position = startPosition - (startForwardCamera * t);
+            t += Time.deltaTime;
+            yield return new WaitForSeconds(0.01f);
+        }
+
+        modular3DText.gameObject.SetActive(false);
     }
 
     IEnumerator ShootBeam()
@@ -296,6 +349,7 @@ public class GameManager : MonoBehaviour
                         firstHitObject = enemy.gameObject;                        
                     }                    
                     enemy.Hit();
+                    
                     if (!destoryAll)
                     {
                         break; //we hit something using auto aim, stop checking other objects
@@ -313,10 +367,18 @@ public class GameManager : MonoBehaviour
         }
 
         if (firstHitObject != null)
-        {
+        {                       
             beamDirection = (firstHitObject.transform.position - LeftController.transform.position).normalized;
         }
-        ActiveLaserBeam.transform.rotation = Quaternion.LookRotation(beamDirection);
+        else
+        {
+            ComboMultiplier = 0;
+        }
+
+        if (beamDirection != Vector3.zero)
+        {
+            ActiveLaserBeam.transform.rotation = Quaternion.LookRotation(beamDirection);
+        }
         ActiveLaserBeam.gameObject.SetActive(true);
 
         while (_msSinceBeam < 0.15f)
@@ -334,45 +396,55 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    public void IncreaseMultipler()
+    {
+        ComboMultiplier++;
+        if (Math.IEEERemainder(ComboMultiplier, 5) == 0)
+        {
+            StartCoroutine(ShowText(ComboMultiplier.ToString() + "X Multiplier!"));
+        }
+    }
+
     public void StartGame()
     {
-        IsStarted = true;
-        if (RightController.GetComponentInChildren<Controller>() != null)
+        if (!IsStarted)
         {
-            RightController.GetComponentInChildren<Controller>().gameObject.SetActive(false);
-        }
-        
-        //_sightLine = GameObject.Instantiate(SightLineSource);
-        //_sightLine.SetActive(true);
-        _msSinceBeam = 0;
-        _msSinceEnemySpawn = 0;
-        if (ResetToStartOnDeath)
-        {
-            _enemiesToSpawn = 3;
-        }
-
-        try
-        {
-            if (_destroyer != null)
+            IsStarted = true;
+            if (RightController.GetComponentInChildren<Controller>() != null)
             {
-                if (_destroyer.GetType() == typeof(Enemy))
+                RightController.GetComponentInChildren<Controller>().gameObject.SetActive(false);
+            }
+
+            //_sightLine = GameObject.Instantiate(SightLineSource);
+            //_sightLine.SetActive(true);
+            _msSinceBeam = 0;
+            _msSinceEnemySpawn = 0;
+            if (ResetToStartOnDeath)
+            {
+                _enemiesToSpawn = 3;
+            }
+
+            try
+            {
+                if (_destroyer != null)
                 {
-                    Destroy(((Enemy)_destroyer).gameObject);
-                }
-                else if (_destroyer.GetType() == typeof(Bullet))
-                {
-                    ((Bullet)_destroyer).gameObject.SetActive(false);
+                    if (_destroyer.GetType() == typeof(Enemy))
+                    {
+                        Destroy(((Enemy)_destroyer).gameObject);
+                    }
+
+                    _destroyer = null;
                 }
 
-                _destroyer = null;
+                ProjectileRenderer.Instance.ClearProjectiles();
             }
+            catch (Exception)
+            {
+                //sometimes the _destroyer is already destroyed, shrug
+            }
+
+            AudioManager.Instance.MusicSource.Play();
         }
-        catch (Exception)
-        {
-            //sometimes the _destroyer is already destroyed, shrug
-        }
-        
-        AudioManager.Instance.MusicSource.Play();
     }
 
     public void StopGame()
@@ -388,15 +460,12 @@ public class GameManager : MonoBehaviour
                 {
                     Destroy(item.gameObject);
                 }
-            }
-
-            foreach (var item in FindObjectsOfType<Bullet>())
-            {
-                if ((object)item != _destroyer)
+                else
                 {
-                    item.gameObject.SetActive(false);
+                    //it is the destroyer, so clear all projectiles instead
+                    ProjectileRenderer.Instance.ClearProjectiles();
                 }
-            }
+            }            
         }
     }
 

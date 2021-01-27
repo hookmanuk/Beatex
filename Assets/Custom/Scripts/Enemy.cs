@@ -65,64 +65,65 @@ public class Enemy : MonoBehaviour
                 if (_msSinceShot >= (60 / AudioManager.Instance.BPM * _hitRate)) //every 1 beats
                 {
                     _msSinceShot = 0;
-                    Bullet bullet = null;
-                    int bulletsOutLoop = 0;
-                    switch (Type)
-                    {
-                        case EnemyType.Green:                            
-                            while (bullet?.gameObject.activeSelf ?? true)
-                            {
-                                bullet = Bullet.GreenBullets[Bullet.GreenBulletCount];
-                                Bullet.GreenBulletCount++;
-                                if (Bullet.GreenBulletCount >= Bullet.GreenBullets.Length - 1)
-                                {
-                                    bulletsOutLoop++;
-                                    if (bulletsOutLoop == 2)
-                                    {
-                                        break;
-                                    }
-                                    Bullet.GreenBulletCount = 0;
-                                }
-                            }
+                    //Bullet bullet = null;
+                    //int bulletsOutLoop = 0;
+                    //switch (Type)
+                    //{
+                    //    case EnemyType.Green:                            
+                    //        while (bullet?.gameObject.activeSelf ?? true)
+                    //        {
+                    //            bullet = Bullet.GreenBullets[Bullet.GreenBulletCount];
+                    //            Bullet.GreenBulletCount++;
+                    //            if (Bullet.GreenBulletCount >= Bullet.GreenBullets.Length - 1)
+                    //            {
+                    //                bulletsOutLoop++;
+                    //                if (bulletsOutLoop == 2)
+                    //                {
+                    //                    break;
+                    //                }
+                    //                Bullet.GreenBulletCount = 0;
+                    //            }
+                    //        }
 
-                            break;
-                        case EnemyType.Red:
-                            //while (bullet?.gameObject.activeSelf ?? true)
-                            //{
-                            //    bullet = Bullet.RedBullets[Bullet.RedBulletCount];
-                            //    Bullet.RedBulletCount++;
-                            //    if (Bullet.RedBulletCount > 999)
-                            //    {
-                            //        Bullet.RedBulletCount = 0;
-                            //    }
-                            //}
-                            break;
-                        case EnemyType.Blue:                            
-                            while (bullet?.gameObject.activeSelf ?? true)
-                            {
-                                bullet = Bullet.BlueBullets[Bullet.BlueBulletCount];
-                                Bullet.BlueBulletCount++;
-                                if (Bullet.BlueBulletCount >= Bullet.BlueBullets.Length - 1)
-                                {
-                                    bulletsOutLoop++;
-                                    if (bulletsOutLoop == 2)
-                                    {
-                                        break;
-                                    }
-                                    Bullet.BlueBulletCount = 0;
-                                }
-                            }
-                            break;
-                        default:
-                            break;
-                    }
-                    if (bullet != null)
-                    {
-                        bullet.gameObject.SetActive(true);
-                        bullet.gameObject.transform.position = transform.position;
-                        bullet.Direction = (GameManager.Instance.UFO.transform.position - transform.position).normalized;
-                        bullet.gameObject.transform.rotation = Quaternion.LookRotation(bullet.Direction);
-                    }
+                    //        break;
+                    //    case EnemyType.Red:
+                    //        //while (bullet?.gameObject.activeSelf ?? true)
+                    //        //{
+                    //        //    bullet = Bullet.RedBullets[Bullet.RedBulletCount];
+                    //        //    Bullet.RedBulletCount++;
+                    //        //    if (Bullet.RedBulletCount > 999)
+                    //        //    {
+                    //        //        Bullet.RedBulletCount = 0;
+                    //        //    }
+                    //        //}
+                    //        break;
+                    //    case EnemyType.Blue:                            
+                    //        while (bullet?.gameObject.activeSelf ?? true)
+                    //        {
+                    //            bullet = Bullet.BlueBullets[Bullet.BlueBulletCount];
+                    //            Bullet.BlueBulletCount++;
+                    //            if (Bullet.BlueBulletCount >= Bullet.BlueBullets.Length - 1)
+                    //            {
+                    //                bulletsOutLoop++;
+                    //                if (bulletsOutLoop == 2)
+                    //                {
+                    //                    break;
+                    //                }
+                    //                Bullet.BlueBulletCount = 0;
+                    //            }
+                    //        }
+                    //        break;
+                    //    default:
+                    //        break;
+                    //}
+                    //if (bullet != null)
+                    //{
+                    //    bullet.gameObject.SetActive(true);
+                    //    bullet.gameObject.transform.position = transform.position;
+                    //    bullet.Direction = (GameManager.Instance.UFO.transform.position - transform.position).normalized;
+                    //    bullet.gameObject.transform.rotation = Quaternion.LookRotation(bullet.Direction);
+                    //}
+                    ProjectileRenderer.Instance.SpawnProjectile(transform.position, Quaternion.LookRotation((GameManager.Instance.UFO.transform.position - transform.position).normalized), Type);                    
                 }
                 else
                 {
@@ -142,7 +143,8 @@ public class Enemy : MonoBehaviour
         _health -= 1;
         if (_health == 0)
         { 
-            IsHit = true;            
+            IsHit = true;
+            GameManager.Instance.IncreaseMultipler();
             StartCoroutine(HitDead());
         }
         else
@@ -159,7 +161,7 @@ public class Enemy : MonoBehaviour
         float intensity = 5f;
 
         var material = GetComponentInChildren<MeshRenderer>().material;
-        var col = material.GetColor("_EmissionColor");
+        var col = material.GetColor("_EmissionColor");        
 
         while (t < 0.1f)
         {

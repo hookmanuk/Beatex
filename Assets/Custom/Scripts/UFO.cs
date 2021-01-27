@@ -23,7 +23,12 @@ public class UFO : MonoBehaviour
             //Gun.transform.position = Body.transform.position + _gunPosition * 0.03f;
 
             var targetDirection = (GameManager.Instance.RightController.transform.position - GameManager.Instance.LeftController.transform.position).normalized;
-            this.transform.rotation = Quaternion.LookRotation(new Vector3(targetDirection.x, targetDirection.y, targetDirection.z));
+
+            if (targetDirection != Vector3.zero)
+            {
+                this.transform.rotation = Quaternion.LookRotation(targetDirection);
+            }
+            
         }
         //Body.transform.rotation = Quaternion.LookRotation(new Vector3(targetDirection.x, targetDirection.y, targetDirection.z));
     }
