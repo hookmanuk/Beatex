@@ -30,6 +30,8 @@ public class GameManager : MonoBehaviour
     public VolumeProfile VolumeProfile;
     public AudioSource WaveAudioSource;
     public Modular3DText Modular3DText;
+    public Modular3DText EnemyScore3DText;
+    public Modular3DText ScoreboardText;
     public bool ResetToStartOnDeath = true;
     public bool DebugPlay;
     public LaserBeam ActiveLaserBeam {get; set;}
@@ -47,6 +49,7 @@ public class GameManager : MonoBehaviour
     private int _waveWarnsPlayed = 0;
     private Vector3[] _spawnPositions = null;
     public int ComboMultiplier = 0;
+    public int Score = 0;
 
     public List<Enemy> EnemiesHit = new List<Enemy>();
 
@@ -284,7 +287,7 @@ public class GameManager : MonoBehaviour
             
             AudioManager.Instance.PlayWaveNo();
             Wave++;
-            StartCoroutine(ShowText("Wave " + Wave.ToString()));
+            StartCoroutine(ShowText("Wave " + Wave.ToString(), TextType.PlayerInfo));
         }
         else
         {
@@ -292,30 +295,57 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    IEnumerator ShowText(string text)
+    IEnumerator ShowText(string text, TextType textType, GameObject relatedObject = null)
     {
         float t = 0;
         Vector3 startPosition;
         Vector3 startForwardCamera;
-        Modular3DText modular3DText;
+        Modular3DText modular3DText;        
 
-        modular3DText = Instantiate(Modular3DText);
-
-        modular3DText.gameObject.SetActive(true);        
-        modular3DText.UpdateText(text);
-
-        startForwardCamera = Camera.transform.forward.normalized * 2;
-        startPosition = Camera.transform.position + startForwardCamera;
-        modular3DText.transform.rotation = Quaternion.LookRotation(Camera.transform.forward);
-
-        while (t < 1.5f)
+        switch (textType)
         {
-            modular3DText.transform.position = startPosition - (startForwardCamera * t);
-            t += Time.deltaTime;
-            yield return new WaitForSeconds(0.01f);
-        }
+            case TextType.PlayerInfo:
+                modular3DText = Instantiate(Modular3DText);
 
-        modular3DText.gameObject.SetActive(false);
+                modular3DText.gameObject.SetActive(true);
+                modular3DText.UpdateText(text);
+
+                startForwardCamera = Camera.transform.forward.normalized * 2;
+                startPosition = Camera.transform.position + startForwardCamera;
+                modular3DText.transform.rotation = Quaternion.LookRotation(Camera.transform.forward);
+
+                while (t < 1.5f)
+                {
+                    modular3DText.transform.position = startPosition - (startForwardCamera * t);
+                    t += Time.deltaTime;
+                    yield return new WaitForSeconds(0.01f);
+                }
+
+                modular3DText.gameObject.SetActive(false);
+
+                break;
+            case TextType.EnemyScore:
+                modular3DText = Instantiate(EnemyScore3DText);
+
+                modular3DText.gameObject.SetActive(true);
+                modular3DText.UpdateText(text);
+
+                startPosition = relatedObject.transform.position;
+                modular3DText.transform.rotation = Quaternion.LookRotation(Camera.transform.forward);                
+
+                while (t < 0.75f)
+                {
+                    modular3DText.transform.position = startPosition + (Vector3.up * (t/4f));
+                    t += Time.deltaTime;
+                    yield return new WaitForSeconds(0.01f);
+                }
+
+                modular3DText.gameObject.SetActive(false);
+
+                break;                
+            default:
+                break;
+        }                
     }
 
     IEnumerator ShootBeam()
@@ -396,20 +426,30 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    public void IncreaseMultipler()
+    public void IncreaseScore(int score, GameObject enemy)
     {
         ComboMultiplier++;
         if (Math.IEEERemainder(ComboMultiplier, 5) == 0)
         {
-            StartCoroutine(ShowText(ComboMultiplier.ToString() + "X Multiplier!"));
+            StartCoroutine(ShowText(ComboMultiplier.ToString() + "X Multiplier!", TextType.PlayerInfo));
         }
+        score = score * ComboMultiplier;
+        Score += score;
+
+        StartCoroutine(ShowText(score.ToString(), TextType.EnemyScore, enemy));
+        ScoreboardText.UpdateText(Score);
     }
 
     public void StartGame()
     {
         if (!IsStarted)
         {
+            Score = 0;
+            ComboMultiplier = 0;
+            Wave = 0;
             IsStarted = true;
+            ScoreboardText.UpdateText(Score);
+
             if (RightController.GetComponentInChildren<Controller>() != null)
             {
                 RightController.GetComponentInChildren<Controller>().gameObject.SetActive(false);
@@ -483,4 +523,10 @@ public class GameManager : MonoBehaviour
         }
         return number;
     }
+}
+
+public enum TextType
+{
+    PlayerInfo,
+    EnemyScore
 }

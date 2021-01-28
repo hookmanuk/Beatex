@@ -10,6 +10,7 @@ public class Enemy : MonoBehaviour
     public bool IsHit = false;
     protected float _hitRate;
     protected int _health = 1;
+    protected int _score = 10;
 
     private Bullet _bulletSource;
 
@@ -22,15 +23,23 @@ public class Enemy : MonoBehaviour
             case EnemyType.Green:
                 _hitRate = 2;
                 _health = 1;
+                _score = 10;
                 break;
             case EnemyType.Red:
                 _hitRate = 0;
                 _health = 1;
+                _score = 10;
                 break;
             case EnemyType.Blue:
                 _hitRate = 1f;
                 _health = 2;
-                break;          
+                _score = 20;
+                break;
+            case EnemyType.Mothership:
+                _hitRate = 0;
+                _health = 1;
+                _score = 50;
+                break;
             default:
                 break;
         }
@@ -144,7 +153,7 @@ public class Enemy : MonoBehaviour
         if (_health == 0)
         { 
             IsHit = true;
-            GameManager.Instance.IncreaseMultipler();
+            GameManager.Instance.IncreaseScore(_score, gameObject);
             StartCoroutine(HitDead());
         }
         else
