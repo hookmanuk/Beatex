@@ -32,6 +32,10 @@ public class GameManager : MonoBehaviour
     public Modular3DText Modular3DText;
     public Modular3DText EnemyScore3DText;
     public Modular3DText ScoreboardText;
+    public Modular3DText HighestScoreText;
+    public Modular3DText HighScoresText;
+    public GameObject HighScoreboard;
+    public GameObject CurrentScoreboard;
     public bool ResetToStartOnDeath = true;
     public bool DebugPlay;
     public LaserBeam ActiveLaserBeam {get; set;}
@@ -52,6 +56,7 @@ public class GameManager : MonoBehaviour
     public int Score = 0;
 
     public List<Enemy> EnemiesHit = new List<Enemy>();
+    dreamloLeaderBoard dl; //http://dreamlo.com/lb/3wAj4tobOEuqRbj6b88HjgrqDHY0wK_UCkp0R3ncu2vQ
 
     private static GameManager _instance;
     public static GameManager Instance
@@ -66,6 +71,9 @@ public class GameManager : MonoBehaviour
     void Start()
     {
         _instance = this;
+        // get the reference here...
+        this.dl = dreamloLeaderBoard.GetSceneDreamloLeaderboard();
+        CurrentScoreboard.SetActive(false);
 
         //for (int i = 0; i < 1000; i++)
         //{
@@ -86,6 +94,10 @@ public class GameManager : MonoBehaviour
         if (DebugPlay)
         {
             StartGame();
+        }
+        else
+        {
+            StartCoroutine(ShowScores());
         }
     }
 
@@ -444,6 +456,8 @@ public class GameManager : MonoBehaviour
     {
         if (!IsStarted)
         {
+            CurrentScoreboard.SetActive(true);
+            HighScoreboard.SetActive(false);
             Score = 0;
             ComboMultiplier = 0;
             Wave = 0;
@@ -489,8 +503,10 @@ public class GameManager : MonoBehaviour
 
     public void StopGame()
     {
-        if (!DebugPlay)
+        if (!DebugPlay && IsStarted)
         {
+            CurrentScoreboard.SetActive(false);
+            HighScoreboard.SetActive(true);
             IsStarted = false;
             AudioManager.Instance.MusicSource.Stop();
 
@@ -505,7 +521,63 @@ public class GameManager : MonoBehaviour
                     //it is the destroyer, so clear all projectiles instead
                     ProjectileRenderer.Instance.ClearProjectiles();
                 }
-            }            
+            }
+
+            SubmitScore();
+            StartCoroutine(ShowScores());
+        }
+    }
+
+    private void SubmitScore()
+    {
+        dl.AddScore(SystemInfo.deviceUniqueIdentifier.Substring(0,12), Score);
+    }
+
+    private IEnumerator ShowScores()
+    {
+        //Debug.Log("Getting Scores")
+        dl.GetScores();
+        List<dreamloLeaderBoard.Score> scoreList = dl.ToListHighToLow();        
+
+        float maxTimeToWait = 5f;
+        float t = 0;
+        while (t < maxTimeToWait)
+        {
+            t += Time.deltaTime;
+            if (scoreList.Count == 0)
+            {
+                //GUILayout.Label("(loading...)");
+                HighScoresText.UpdateText("Loading...");
+                scoreList = dl.ToListHighToLow();
+            }
+            else
+            {
+                int maxToDisplay = 10;
+                int count = 0;
+                string strScores = "";
+                foreach (dreamloLeaderBoard.Score currentScore in scoreList)
+                {
+                    count++;
+
+                    if (count == 1)
+                    {
+                        HighestScoreText.UpdateText(currentScore.score.ToString());
+                    }
+                    strScores += currentScore.playerName + " - " + currentScore.score.ToString();
+                    //GUILayout.BeginHorizontal();
+                    //GUILayout.Label(currentScore.playerName, width200);
+                    //GUILayout.Label(currentScore.score.ToString(), width200);
+                    //GUILayout.EndHorizontal();
+
+                    if (count >= maxToDisplay) break;
+
+                    strScores += Environment.NewLine;
+                }
+
+                HighScoresText.UpdateText(strScores);
+                break;
+            }
+            yield return new WaitForSeconds(0.1f);
         }
     }
 
