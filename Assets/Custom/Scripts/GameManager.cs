@@ -40,6 +40,8 @@ public class GameManager : MonoBehaviour
     public GameObject CurrentScoreboard;
     public SpawnParticles SpawnIn;
     public Nuke NukeSource;
+    public SlowMotion SlowMotionSource;
+    public Camera SpecatorCamera;
     public bool ResetToStartOnDeath = true;
     public bool DebugPlay;
     public LaserBeam ActiveLaserBeam {get; set;}
@@ -48,13 +50,16 @@ public class GameManager : MonoBehaviour
     public float Speed = 1f;
     public bool NukeIsExploding { get; set; }
 
-    private float _msSinceBeam = 0;
-    private float _msSinceEnemySpawn = 0;    
+    private float _secsSinceBeat = 0;
+    private float _secsSinceBeam = 0;
+    private float _secsSinceEnemySpawn = 0;    
+    private bool _isMovingSpectatorCam = false;
     public bool IsStarted { get; set; } = false;
     public bool IsOnBeat { get; set; } = false;
     private GameObject _sightLine;
     private object _destroyer = null;
     private Vignette _vignette;
+    private ChannelMixer _channelMixer;
     private int _waveWarnsPlayed = 0;
     private Vector3[] _spawnPositions = null;
     private Vector3 _centralSpawnPoint;
@@ -96,7 +101,13 @@ public class GameManager : MonoBehaviour
 
         //GetComponentInChildren<Camera>().                
 
-        if (!VolumeProfile.TryGet(out _vignette)) throw new System.NullReferenceException(nameof(_vignette));        
+        
+
+        if (!VolumeProfile.TryGet(out _vignette)) throw new System.NullReferenceException(nameof(_vignette));
+        _vignette.intensity.Override(0);
+
+        if (!VolumeProfile.TryGet(out _channelMixer)) throw new System.NullReferenceException(nameof(_channelMixer));
+        _channelMixer.active = false;
 
         if (DebugPlay)
         {
@@ -141,6 +152,8 @@ public class GameManager : MonoBehaviour
     {
         RefreshRateCheck();
 
+        PollCameraCheck();
+
         if (IsStarted)
         {            
             if (EnemyHit())
@@ -150,6 +163,8 @@ public class GameManager : MonoBehaviour
             else
             {
                 RearVignetteCheck();
+
+                BeatCheck();
 
                 BeamShootCheck();
 
@@ -165,6 +180,34 @@ public class GameManager : MonoBehaviour
             RefreshRate = XRDevice.refreshRate;
             Time.fixedDeltaTime = (float)Math.Round(1 / XRDevice.refreshRate, 8);
         }
+    }
+
+    public void SetTimeAbsolute(float timeScale)
+    {
+        Time.timeScale = timeScale;
+
+        if (timeScale < 1)
+        {
+            _channelMixer.active = true;
+        }
+        else
+        {
+            _channelMixer.active = false;
+        }
+    }
+
+    public IEnumerator SetTime(float timeScale)
+    {
+        float t = 0;
+        float startTimescale = Time.timeScale;
+        float diffTimescale = timeScale - startTimescale;
+
+        while (t <= 1)
+        {            
+            Time.timeScale = startTimescale + (diffTimescale * t);
+            yield return new WaitForSeconds(0.01f * Time.timeScale);
+            t += Time.deltaTime / Time.timeScale;
+        }        
     }
 
     private bool EnemyHit()
@@ -184,6 +227,12 @@ public class GameManager : MonoBehaviour
             if (nuke != null && !nuke.Exploding)
             {
                 item.gameObject.GetComponent<Nuke>().Explode();
+            }
+
+            var slowMotion = item.gameObject.GetComponent<SlowMotion>();
+            if (slowMotion != null && !slowMotion.Exploding)
+            {
+                item.gameObject.GetComponent<SlowMotion>().Explode();
             }
         }
 
@@ -214,25 +263,45 @@ public class GameManager : MonoBehaviour
         _vignette.intensity.Override(1f * vignetteRatio);
     }
 
-    private void BeamShootCheck()
+    private void BeatCheck()
     {
-        if (_msSinceBeam >= (60 / AudioManager.Instance.BPM * 1)) //every 1 beats
+        if (_secsSinceBeat >= (60 / AudioManager.Instance.BPM * 1)) //every 1 beats
         {
             IsOnBeat = true;
-            _msSinceBeam = 0;
-            ActiveLaserBeam = GameObject.Instantiate(LaserBeamSource);
-            StartCoroutine(ShootBeam());
+            _secsSinceBeat = 0;
         }
         else
         {
             IsOnBeat = false;
-            _msSinceBeam += Time.deltaTime;
+            _secsSinceBeat += Time.deltaTime;
         }
+    }
+
+    private void BeamShootCheck()
+    {
+        if (_secsSinceBeam >= (60 / AudioManager.Instance.BPM * 1)) //every 1 beats
+        {            
+            _secsSinceBeam = 0;
+            ActiveLaserBeam = GameObject.Instantiate(LaserBeamSource);
+            StartCoroutine(ShootBeam());
+        }
+        else
+        {         
+            _secsSinceBeam += Time.unscaledDeltaTime;
+        }
+    }
+
+    private void PollCameraCheck()
+    {
+        if (!_isMovingSpectatorCam)
+        {            
+            StartCoroutine(PollMovementForSpectatorCamera());
+        }        
     }
 
     private void EnemySpawnCheck()
     {        
-        if (_waveWarnsPlayed == 0 && _msSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 11)) //on 11th beat
+        if (_waveWarnsPlayed == 0 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 11)) //on 11th beat
         {
             //Calculate positions for spawns
             _spawnPositions = new Vector3[_enemiesToSpawn];
@@ -249,36 +318,36 @@ public class GameManager : MonoBehaviour
             WaveAudioSource.gameObject.transform.position = _centralSpawnPoint;
 
             AudioManager.Instance.PlayWaveWarn(WaveAudioSource);            
-            _waveWarnsPlayed++;
+            _waveWarnsPlayed++;            
         }
 
-        if (_waveWarnsPlayed == 1 && _msSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 12)) //on 12th beat
+        if (_waveWarnsPlayed == 1 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 12)) //on 12th beat
         {
             SpawnParticles(1);
             _waveWarnsPlayed++;
         }
 
-        if (_waveWarnsPlayed == 2 && _msSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 13)) //on 13th beat
+        if (_waveWarnsPlayed == 2 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 13)) //on 13th beat
         {            
             AudioManager.Instance.PlayWaveWarn(WaveAudioSource);
             _waveWarnsPlayed++;
         }
 
-        if (_waveWarnsPlayed == 3 && _msSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 14)) //on 14th beat
+        if (_waveWarnsPlayed == 3 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 14)) //on 14th beat
         {
             SpawnParticles(2);
             _waveWarnsPlayed++;
         }
 
-        if (_waveWarnsPlayed == 4 && _msSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 15)) //on 15th beat
+        if (_waveWarnsPlayed == 4 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 15)) //on 15th beat
         {            
             AudioManager.Instance.PlayWaveStart(WaveAudioSource);
             _waveWarnsPlayed++;
         }
 
-        if (_msSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 16)) //every 16 beats
+        if (_secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 16)) //every 16 beats
         {
-            _msSinceEnemySpawn = 0;
+            _secsSinceEnemySpawn = 0;
             _waveWarnsPlayed = 0;
             Enemy enemySpawn = null;
 
@@ -318,12 +387,24 @@ public class GameManager : MonoBehaviour
                     mothership.gameObject.transform.rotation = Quaternion.LookRotation((mothership.gameObject.transform.position - UFO.transform.position).normalized); //rotate to look at UFO
                 }
 
-                //if (Math.IEEERemainder(_enemiesToSpawn - 7, 3) == 0) //change to 7
-                if (Math.IEEERemainder(_enemiesToSpawn - 5, 1) == 0) //change to 7
+                if (Math.IEEERemainder(_enemiesToSpawn - 7, 3) == 0)
+                //if (Math.IEEERemainder(_enemiesToSpawn - 5, 1) == 0) //for testing
                 {
-                    Nuke nuke = Instantiate(NukeSource);
-                    nuke.gameObject.SetActive(true);
-                    nuke.gameObject.transform.position = GetRandomPosition(0.5f, 1f, 0.5f, 1.5f);
+                    int randomPowerupType = UnityEngine.Random.Range(1, 3);
+
+                    if (randomPowerupType == 1)
+                    {
+                        Nuke nuke = Instantiate(NukeSource);
+                        nuke.gameObject.SetActive(true);
+                        nuke.gameObject.transform.position = GetRandomPosition(0.5f, 1f, 0.5f, 1.5f);
+                    }
+                    else if (randomPowerupType == 2)
+                    {
+                        SlowMotion slowMotion = Instantiate(SlowMotionSource);
+                        slowMotion.gameObject.SetActive(true);
+                        slowMotion.gameObject.transform.position = GetRandomPosition(0.5f, 1f, 0.5f, 1.5f);
+                    }
+
                 }
             }
 
@@ -335,8 +416,39 @@ public class GameManager : MonoBehaviour
         }
         else
         {
-            _msSinceEnemySpawn += Time.deltaTime * GameManager.Instance.Speed;
+            _secsSinceEnemySpawn += Time.deltaTime * GameManager.Instance.Speed;
         }
+    }
+
+    private IEnumerator PollMovementForSpectatorCamera()
+    {
+        float t = 0;
+        float fraction = 0;
+
+        _isMovingSpectatorCam = true;
+        //Vector3 endPosition = UFO.transform.position - (_centralSpawnPoint - UFO.transform.position).normalized * 1f + Vector3.up * 0.4f;
+        //Quaternion endRotation = Quaternion.LookRotation(_centralSpawnPoint - SpecatorCamera.transform.position);
+        //while (t < 3)
+        //{
+        //    fraction = t / 3f;
+        //    SpecatorCamera.transform.position = Vector3.Lerp(SpecatorCamera.transform.position, endPosition, fraction);
+        //    SpecatorCamera.transform.rotation = Quaternion.Lerp(SpecatorCamera.transform.rotation, Quaternion.LookRotation(_centralSpawnPoint - SpecatorCamera.transform.position), fraction);
+        //    t += Time.deltaTime;
+        //    yield return new WaitForSeconds(0.01f);
+        //}        
+
+        Vector3 endPosition = UFO.transform.position - (Camera.transform.forward) * 1f + Vector3.up * 0.4f;
+        Quaternion endRotation = Quaternion.LookRotation(Camera.transform.forward);
+        while (t < 0.3f)
+        {
+            fraction = t / 4f;
+            SpecatorCamera.transform.position = Vector3.Lerp(SpecatorCamera.transform.position, endPosition, fraction);
+            SpecatorCamera.transform.rotation = Quaternion.Lerp(SpecatorCamera.transform.rotation, endRotation, fraction);
+            t += Time.deltaTime;
+            yield return new WaitForSeconds(0.01f);
+        }
+
+        _isMovingSpectatorCam = false;
     }
 
     private void CreateSpawnParticles()
@@ -479,9 +591,9 @@ public class GameManager : MonoBehaviour
         }
         ActiveLaserBeam.gameObject.SetActive(true);
 
-        while (_msSinceBeam < 0.15f)
+        while (_secsSinceBeam < 0.15f)
         {
-            ActiveLaserBeam.transform.position += beamDirection * 20 * Time.deltaTime;
+            ActiveLaserBeam.transform.position += beamDirection * 20 * Time.unscaledDeltaTime;
 
             yield return null;
         }
@@ -536,8 +648,8 @@ public class GameManager : MonoBehaviour
 
             //_sightLine = GameObject.Instantiate(SightLineSource);
             //_sightLine.SetActive(true);
-            _msSinceBeam = 0;
-            _msSinceEnemySpawn = 0;
+            _secsSinceBeam = 0;
+            _secsSinceEnemySpawn = 0;
             _waveWarnsPlayed = 0;
             if (ResetToStartOnDeath)
             {
@@ -563,7 +675,7 @@ public class GameManager : MonoBehaviour
                 //sometimes the _destroyer is already destroyed, shrug
             }
 
-            AudioManager.Instance.MusicSource.Play();
+            AudioManager.Instance?.MusicSource.Play();
         }
     }
 

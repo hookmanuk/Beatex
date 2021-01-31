@@ -26,8 +26,14 @@ public class AudioManager : MonoBehaviour
     {
         _instance = this;
         BPM = 120;
-    }
-   
+
+        if (GameManager.Instance.IsStarted && !MusicSource.isPlaying)
+        {
+            MusicSource.Play();
+            
+        }
+    }    
+
     public void PlayWaveNo()
     {
         if (GameManager.Instance.Wave < 15)
@@ -44,5 +50,11 @@ public class AudioManager : MonoBehaviour
     public void PlayWaveStart(AudioSource enemySource)
     {
         enemySource.PlayOneShot(WaveStart);
+    }
+
+    public void ChangePitch(float pitch)
+    {
+        MusicSource.pitch = pitch;
+        MusicSource.outputAudioMixerGroup.audioMixer.SetFloat("MyExposedParam", 1 / pitch);
     }
 }

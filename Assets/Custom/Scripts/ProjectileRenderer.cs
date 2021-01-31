@@ -60,13 +60,17 @@ public class ProjectileRenderer : MonoBehaviour
         projectiles[enemyType].Add(n);
     }
 
+    private void Update()
+    {
+        BatchAndRender();        
+    }
+
     private void FixedUpdate()
     {
         if (GameManager.Instance.IsOnBeat)
-        { 
-            UpdateProjectiles(Time.deltaTime);            
+        {
+            UpdateProjectiles(Time.deltaTime);
         }
-        BatchAndRender();
     }
 
     private void BatchAndRender()
@@ -193,7 +197,7 @@ public class ProjectileRenderer : MonoBehaviour
                     projectile.pos += transPoint * speed * t;
                 }
             }             
-            t += Time.deltaTime;
+            t += Time.unscaledDeltaTime;
             yield return new WaitForSeconds(0.01f);
         }
 
