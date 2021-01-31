@@ -8,6 +8,7 @@ using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using MText;
+using System.Linq;
 
 public class GameManager : MonoBehaviour
 {
@@ -33,15 +34,19 @@ public class GameManager : MonoBehaviour
     public Modular3DText EnemyScore3DText;
     public Modular3DText ScoreboardText;
     public Modular3DText HighestScoreText;
+    public Modular3DText LastScoreText;
     public Modular3DText HighScoresText;
     public GameObject HighScoreboard;
     public GameObject CurrentScoreboard;
+    public SpawnParticles SpawnIn;
+    public Nuke NukeSource;
     public bool ResetToStartOnDeath = true;
     public bool DebugPlay;
     public LaserBeam ActiveLaserBeam {get; set;}
     public int Wave { get; set; } = 0;
     private int _enemiesToSpawn = 3;
     public float Speed = 1f;
+    public bool NukeIsExploding { get; set; }
 
     private float _msSinceBeam = 0;
     private float _msSinceEnemySpawn = 0;    
@@ -52,6 +57,8 @@ public class GameManager : MonoBehaviour
     private Vignette _vignette;
     private int _waveWarnsPlayed = 0;
     private Vector3[] _spawnPositions = null;
+    private Vector3 _centralSpawnPoint;
+    private SpawnParticles _spawnParticles;
     public int ComboMultiplier = 0;
     public int Score = 0;
 
@@ -128,13 +135,7 @@ public class GameManager : MonoBehaviour
     //            _boundaries = currentBoundaries;
     //        DrawWalls();
     //    }
-    //}
-
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }  
+    //} 
 
     private void FixedUpdate()
     {
@@ -170,14 +171,20 @@ public class GameManager : MonoBehaviour
     {
         _destroyer = null;
 
-        Collider[] objectsHitPlayer = Physics.OverlapSphere(LeftController.transform.position, 0.04f);
+        Collider[] objectsHitPlayer = Physics.OverlapSphere(UFO.transform.position, 0.04f);
         foreach (var item in objectsHitPlayer)
         {
             if (item.gameObject.GetComponentInParent<Enemy>() != null)
             {
                 //hit by enemy
                 _destroyer = item.gameObject.GetComponentInParent<Enemy>();
-            }           
+            }
+
+            var nuke = item.gameObject.GetComponent<Nuke>();
+            if (nuke != null && !nuke.Exploding)
+            {
+                item.gameObject.GetComponent<Nuke>().Explode();
+            }
         }
 
         return (_destroyer != null);
@@ -185,14 +192,14 @@ public class GameManager : MonoBehaviour
 
     private void RearVignetteCheck()
     {
-        Collider[] objectsBehind = Physics.OverlapBox(LeftController.transform.position - Camera.transform.forward.normalized * 0.5f, new Vector3(0.75f, 0.45f, 0.45f), Quaternion.LookRotation(Camera.transform.forward, Vector3.up));
+        Collider[] objectsBehind = Physics.OverlapBox(UFO.transform.position - Camera.transform.forward.normalized * 0.5f, new Vector3(0.75f, 0.45f, 0.45f), Quaternion.LookRotation(Camera.transform.forward, Vector3.up));
 
         float closestDistance = 999f;
         foreach (var item in objectsBehind)
         {
             if (item.gameObject.GetComponentInParent<Enemy>())
             {
-                var itemDistance = (LeftController.transform.position - item.ClosestPoint(LeftController.transform.position)).magnitude;
+                var itemDistance = (UFO.transform.position - item.ClosestPoint(UFO.transform.position)).magnitude;
                 //Debug.Log(item.name + " " + itemDistance);
 
                 if (itemDistance < closestDistance)
@@ -224,34 +231,47 @@ public class GameManager : MonoBehaviour
     }
 
     private void EnemySpawnCheck()
-    {
+    {        
         if (_waveWarnsPlayed == 0 && _msSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 11)) //on 11th beat
         {
             //Calculate positions for spawns
             _spawnPositions = new Vector3[_enemiesToSpawn];
-            Vector3 centralSpawnPoint = LeftController.transform.position + GetRandomPosition(1,2);
+            _centralSpawnPoint = UFO.transform.position + GetRandomPosition(2,3);
 
             for (int i = 0; i < _enemiesToSpawn; i++)
             {
-                _spawnPositions[i] = UnityEngine.Random.insideUnitSphere * 1.25f + centralSpawnPoint;
+                _spawnPositions[i] = UnityEngine.Random.insideUnitSphere * 1.25f + _centralSpawnPoint;
             }
 
+            CreateSpawnParticles();            
+
             //set the audio source to play where the wave will spawn
-            WaveAudioSource.gameObject.transform.position = centralSpawnPoint;
+            WaveAudioSource.gameObject.transform.position = _centralSpawnPoint;
 
             AudioManager.Instance.PlayWaveWarn(WaveAudioSource);            
             _waveWarnsPlayed++;
         }
 
-        if (_waveWarnsPlayed == 1 && _msSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 13)) //on 13th beat
+        if (_waveWarnsPlayed == 1 && _msSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 12)) //on 12th beat
         {
+            SpawnParticles(1);
+            _waveWarnsPlayed++;
+        }
+
+        if (_waveWarnsPlayed == 2 && _msSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 13)) //on 13th beat
+        {            
             AudioManager.Instance.PlayWaveWarn(WaveAudioSource);
             _waveWarnsPlayed++;
         }
 
-        if (_waveWarnsPlayed == 2 && _msSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 15)) //on 15th beat
+        if (_waveWarnsPlayed == 3 && _msSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 14)) //on 14th beat
         {
+            SpawnParticles(2);
+            _waveWarnsPlayed++;
+        }
 
+        if (_waveWarnsPlayed == 4 && _msSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 15)) //on 15th beat
+        {            
             AudioManager.Instance.PlayWaveStart(WaveAudioSource);
             _waveWarnsPlayed++;
         }
@@ -261,6 +281,8 @@ public class GameManager : MonoBehaviour
             _msSinceEnemySpawn = 0;
             _waveWarnsPlayed = 0;
             Enemy enemySpawn = null;
+
+            SpawnParticles(3);
 
             //spawn enemies
             for (int i = 0; i < _enemiesToSpawn; i++)
@@ -283,6 +305,7 @@ public class GameManager : MonoBehaviour
                 enemySpawn = GameObject.Instantiate(enemySpawn);
                 enemySpawn.gameObject.SetActive(true);
                 enemySpawn.gameObject.transform.position = _spawnPositions[i];
+                enemySpawn.gameObject.transform.rotation = Quaternion.LookRotation((enemySpawn.gameObject.transform.position - UFO.transform.position).normalized); //rotate to look at UFO
             }
 
             if (_enemiesToSpawn >= 5)
@@ -291,7 +314,16 @@ public class GameManager : MonoBehaviour
                 {
                     Mothership mothership = Instantiate(EnemyMothershipSource);
                     mothership.gameObject.SetActive(true);
-                    mothership.gameObject.transform.position = WaveAudioSource.gameObject.transform.position;
+                    mothership.gameObject.transform.position = WaveAudioSource.gameObject.transform.position * 1.3f;
+                    mothership.gameObject.transform.rotation = Quaternion.LookRotation((mothership.gameObject.transform.position - UFO.transform.position).normalized); //rotate to look at UFO
+                }
+
+                //if (Math.IEEERemainder(_enemiesToSpawn - 7, 3) == 0) //change to 7
+                if (Math.IEEERemainder(_enemiesToSpawn - 5, 1) == 0) //change to 7
+                {
+                    Nuke nuke = Instantiate(NukeSource);
+                    nuke.gameObject.SetActive(true);
+                    nuke.gameObject.transform.position = GetRandomPosition(0.5f, 1f, 0.5f, 1.5f);
                 }
             }
 
@@ -307,6 +339,30 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    private void CreateSpawnParticles()
+    {
+        _spawnParticles = Instantiate(SpawnIn);
+        _spawnParticles.transform.position = _centralSpawnPoint;
+        _spawnParticles.transform.rotation = Quaternion.LookRotation(UFO.transform.position - _centralSpawnPoint);
+        _spawnParticles.gameObject.SetActive(true);
+    }
+
+    private void SpawnParticles(int system)
+    {
+        if (system == 1)
+        {
+            _spawnParticles.Pulse1.Play();
+        }
+        else if (system == 2)
+        {
+            _spawnParticles.Pulse2.Play();
+        }
+        else if (system == 3)
+        {
+            _spawnParticles.Pulse3.Play();
+        }
+    }
+   
     IEnumerator ShowText(string text, TextType textType, GameObject relatedObject = null)
     {
         float t = 0;
@@ -362,8 +418,8 @@ public class GameManager : MonoBehaviour
 
     IEnumerator ShootBeam()
     {
-        ActiveLaserBeam.transform.position = LeftController.transform.position;
-        var beamDirection = (RightController.transform.position - LeftController.transform.position).normalized;
+        ActiveLaserBeam.transform.position = UFO.transform.position;
+        var beamDirection = (RightController.transform.position - UFO.transform.position).normalized;
         //yield return new WaitForSeconds(0.1f);
         
         GameObject firstHitObject = null;
@@ -375,7 +431,7 @@ public class GameManager : MonoBehaviour
         while (radiusToCheck < 1f)
         {
             Vector3 sphereRadiusLength = beamDirection * radiusToCheck;
-            hitObjects = Physics.SphereCastAll(LeftController.transform.position + sphereRadiusLength, radiusToCheck, beamDirection, 10f);            
+            hitObjects = Physics.SphereCastAll(UFO.transform.position + sphereRadiusLength, radiusToCheck, beamDirection, 10f);            
             foreach (var hitObject in hitObjects)
             {
                 Enemy enemy = hitObject.collider.gameObject.GetComponentInParent<Enemy>();
@@ -410,7 +466,7 @@ public class GameManager : MonoBehaviour
 
         if (firstHitObject != null)
         {                       
-            beamDirection = (firstHitObject.transform.position - LeftController.transform.position).normalized;
+            beamDirection = (firstHitObject.transform.position - UFO.transform.position).normalized;
         }
         else
         {
@@ -441,7 +497,7 @@ public class GameManager : MonoBehaviour
     public void IncreaseScore(int score, GameObject enemy)
     {
         ComboMultiplier++;
-        if (Math.IEEERemainder(ComboMultiplier, 5) == 0)
+        if (!NukeIsExploding && Math.IEEERemainder(ComboMultiplier, 5) == 0)
         {
             StartCoroutine(ShowText(ComboMultiplier.ToString() + "X Multiplier!", TextType.PlayerInfo));
         }
@@ -449,6 +505,15 @@ public class GameManager : MonoBehaviour
         Score += score;
 
         StartCoroutine(ShowText(score.ToString(), TextType.EnemyScore, enemy));
+
+        if (!NukeIsExploding)
+        {
+            UpdateScore();
+        }        
+    }
+
+    public void UpdateScore()
+    {
         ScoreboardText.UpdateText(Score);
     }
 
@@ -473,6 +538,7 @@ public class GameManager : MonoBehaviour
             //_sightLine.SetActive(true);
             _msSinceBeam = 0;
             _msSinceEnemySpawn = 0;
+            _waveWarnsPlayed = 0;
             if (ResetToStartOnDeath)
             {
                 _enemiesToSpawn = 3;
@@ -523,6 +589,11 @@ public class GameManager : MonoBehaviour
                 }
             }
 
+            foreach (var item in FindObjectsOfType<Nuke>())
+            {
+                Destroy(item.gameObject);
+            }
+
             SubmitScore();
             StartCoroutine(ShowScores());
         }
@@ -530,6 +601,7 @@ public class GameManager : MonoBehaviour
 
     private void SubmitScore()
     {
+        LastScoreText.UpdateText(Score);
         dl.AddScore(SystemInfo.deviceUniqueIdentifier.Substring(0,12), Score);
     }
 
@@ -555,6 +627,15 @@ public class GameManager : MonoBehaviour
                 int maxToDisplay = 10;
                 int count = 0;
                 string strScores = "";
+
+                var currentPlayerScore = scoreList.Where(s => s.playerName.Substring(0, 12) == SystemInfo.deviceUniqueIdentifier.Substring(0, 12) && s.score < Score).FirstOrDefault();
+
+                if (currentPlayerScore.score > 0)
+                {
+                    currentPlayerScore.score = Score;
+                    scoreList = scoreList.OrderByDescending(s => s.score).ToList();
+                }
+
                 foreach (dreamloLeaderBoard.Score currentScore in scoreList)
                 {
                     count++;
@@ -563,7 +644,9 @@ public class GameManager : MonoBehaviour
                     {
                         HighestScoreText.UpdateText(currentScore.score.ToString());
                     }
+                    
                     strScores += currentScore.playerName + " - " + currentScore.score.ToString();
+                    
                     //GUILayout.BeginHorizontal();
                     //GUILayout.Label(currentScore.playerName, width200);
                     //GUILayout.Label(currentScore.score.ToString(), width200);
@@ -581,9 +664,9 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    public static Vector3 GetRandomPosition(float minRange, float maxRange)
+    public static Vector3 GetRandomPosition(float minRange, float maxRange, float ymin = 0.1f, float ymax = 2f)
     {
-        return new Vector3(GetRandomPositionComponent(minRange, maxRange, true), GetRandomPositionComponent(0.1f, 2f, false), GetRandomPositionComponent(minRange, maxRange, true));
+        return new Vector3(GetRandomPositionComponent(minRange, maxRange, true), GetRandomPositionComponent(ymin, ymax, false), GetRandomPositionComponent(minRange, maxRange, true));
     }
 
     public static float GetRandomPositionComponent(float minRange, float maxRange, bool blnAllowNegatives)

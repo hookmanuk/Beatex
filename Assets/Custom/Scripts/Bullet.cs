@@ -20,12 +20,6 @@ public class Bullet : MonoBehaviour
         _rigidBody = GetComponent<Rigidbody>();
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-
-    }
-
     private void FixedUpdate()
     {        
         if (GameManager.Instance.IsOnBeat)

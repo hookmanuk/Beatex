@@ -47,12 +47,6 @@ public class Enemy : MonoBehaviour
         //GetComponent<AudioSource>().PlayOneShot(AudioManager.Instance.EnemyBirth);
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
-
     private void FixedUpdate()
     {        
         if (GameManager.Instance.IsStarted)
@@ -147,10 +141,10 @@ public class Enemy : MonoBehaviour
         }
     }    
 
-    public void Hit()
+    public void Hit(bool destroy = false)
     {
         _health -= 1;
-        if (_health == 0)
+        if (_health == 0 || destroy)
         { 
             IsHit = true;
             GameManager.Instance.IncreaseScore(_score, gameObject);
@@ -169,16 +163,44 @@ public class Enemy : MonoBehaviour
         float t = 0;
         float intensity = 5f;
 
-        var material = GetComponentInChildren<MeshRenderer>().material;
-        var col = material.GetColor("_EmissionColor");        
+        GetComponent<AudioSource>().PlayOneShot(AudioManager.Instance.EnemyHit);
 
-        while (t < 0.1f)
+        if (Type == EnemyType.Mothership)
         {
-            intensity = (_health - 2) - t / 0.1f * 1;
-            float factor = Mathf.Pow(2, intensity);
-            material.SetColor("_EmissionColor", new Color(col.r * factor, col.g * factor, col.b * factor));
-            yield return new WaitForSeconds(0.01f);
-            t += 0.01f;
+            float fromDissolved = 0;
+            float extraDissolved = 0;
+
+            if (_health == 2)
+            {
+                fromDissolved = 0f;
+                extraDissolved = 0.4f;
+            }
+            else if (_health == 1)
+            {
+                fromDissolved = 0.4f;
+                extraDissolved = 0.1f;
+            }
+
+            while (t < 0.1f)
+            {
+                ((Mothership)this).MothershipMesh.materials[1].SetFloat("DISSOLVED", fromDissolved + (extraDissolved / 0.1f * t));
+                yield return new WaitForSeconds(0.01f);
+                t += 0.01f;
+            }
+        }
+        else
+        {
+            var material = GetComponentInChildren<MeshRenderer>().material;
+            var col = material.GetColor("_EmissionColor");
+
+            while (t < 0.1f)
+            {
+                intensity = (_health - 2) - t / 0.1f * 1;
+                float factor = Mathf.Pow(2, intensity);
+                material.SetColor("_EmissionColor", new Color(col.r * factor, col.g * factor, col.b * factor));
+                yield return new WaitForSeconds(0.01f);
+                t += 0.01f;
+            }
         }
     }
 
@@ -215,8 +237,11 @@ public class Enemy : MonoBehaviour
         {
             DeathParticleSystem.Play();
         }
-        GetComponentInChildren<MeshRenderer>().enabled = false;
-
+        foreach (var item in GetComponentsInChildren<MeshRenderer>())
+        {
+            item.enabled = false;
+        }
+        
         yield return new WaitForSeconds(1f);
 
         GameObject.Destroy(this.gameObject);        

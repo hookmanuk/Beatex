@@ -10,7 +10,7 @@ public class ProjectileRenderer : MonoBehaviour
     public Mesh mesh;
     public Material BlueBulletMaterial;
     public Material GreenBulletMaterial;
-    public float speed;
+    private float speed = 0.5f;
     public float damage;
 
     [Header("Instances")]
@@ -53,7 +53,7 @@ public class ProjectileRenderer : MonoBehaviour
         ProjectileData n = new ProjectileData();
         n.pos = position;
         n.rot = rotation;
-        n.scale = Vector3.one * 0.008f;                
+        n.scale = Vector3.one * 0.04f;                 //was 0.008f
         n.damage = damage;
         n.enemyType = enemyType;
 

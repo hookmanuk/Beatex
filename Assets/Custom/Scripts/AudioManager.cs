@@ -8,6 +8,7 @@ public class AudioManager : MonoBehaviour
     public AudioSource MusicSource;
     public AudioSource SFXSource;
     public AudioClip EnemyBirth;
+    public AudioClip EnemyHit;
     public AudioClip EnemyDeath;
     public AudioClip WaveWarn;
     public AudioClip WaveStart;
@@ -26,13 +27,7 @@ public class AudioManager : MonoBehaviour
         _instance = this;
         BPM = 120;
     }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
-    
+   
     public void PlayWaveNo()
     {
         if (GameManager.Instance.Wave < 15)
