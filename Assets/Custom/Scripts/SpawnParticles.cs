@@ -4,9 +4,10 @@ using UnityEngine;
 
 public class SpawnParticles : MonoBehaviour
 {
-    public ParticleSystem Pulse1;
-    public ParticleSystem Pulse2;
-    public ParticleSystem Pulse3;
+    public ParticleSystem SmallPulse;
+    public ParticleSystem SmallPulseSparks;
+    public ParticleSystem BigPulse;
+    public ParticleSystem BigPulseSparks;
 
     // Start is called before the first frame update
     void Start()

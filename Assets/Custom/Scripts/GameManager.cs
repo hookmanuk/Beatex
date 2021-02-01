@@ -316,30 +316,36 @@ public class GameManager : MonoBehaviour
 
             //set the audio source to play where the wave will spawn
             WaveAudioSource.gameObject.transform.position = _centralSpawnPoint;
-
-            AudioManager.Instance.PlayWaveWarn(WaveAudioSource);            
+            
             _waveWarnsPlayed++;            
         }
 
-        if (_waveWarnsPlayed == 1 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 12)) //on 12th beat
+        //delay half a beat??
+        if (_waveWarnsPlayed == 1 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 11.5f))
+        {
+            AudioManager.Instance.PlayWaveWarn(WaveAudioSource);
+            _waveWarnsPlayed++;
+        }
+
+        if (_waveWarnsPlayed == 2 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 12)) //on 12th beat
         {
             SpawnParticles(1);
             _waveWarnsPlayed++;
         }
 
-        if (_waveWarnsPlayed == 2 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 13)) //on 13th beat
+        if (_waveWarnsPlayed == 3 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 13.5f)) //on 13th beat
         {            
             AudioManager.Instance.PlayWaveWarn(WaveAudioSource);
             _waveWarnsPlayed++;
         }
 
-        if (_waveWarnsPlayed == 3 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 14)) //on 14th beat
+        if (_waveWarnsPlayed == 4 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 14)) //on 14th beat
         {
             SpawnParticles(2);
             _waveWarnsPlayed++;
         }
 
-        if (_waveWarnsPlayed == 4 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 15)) //on 15th beat
+        if (_waveWarnsPlayed == 5 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 15.5f)) //on 15th beat
         {            
             AudioManager.Instance.PlayWaveStart(WaveAudioSource);
             _waveWarnsPlayed++;
@@ -463,15 +469,16 @@ public class GameManager : MonoBehaviour
     {
         if (system == 1)
         {
-            _spawnParticles.Pulse1.Play();
+            _spawnParticles.SmallPulse.Play();
         }
         else if (system == 2)
         {
-            _spawnParticles.Pulse2.Play();
+            _spawnParticles.SmallPulse.Play();
         }
         else if (system == 3)
         {
-            _spawnParticles.Pulse3.Play();
+            _spawnParticles.BigPulse.Play();
+            _spawnParticles.BigPulseSparks.Play();
         }
     }
    
