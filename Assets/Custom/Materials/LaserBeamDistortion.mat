@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!114 &-6824241242926768645
+--- !u!114 &-3255280265641966151
 MonoBehaviour:
   m_ObjectHideFlags: 11
   m_CorrespondingSourceObject: {fileID: 0}
@@ -20,15 +20,14 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: LaserBeam
-  m_Shader: {fileID: 4800000, guid: 933532a4fcc9baf4fa0491de14d08ed7, type: 3}
-  m_ShaderKeywords: _EMISSION
-  m_LightmapFlags: 2
-  m_EnableInstancingVariants: 0
+  m_Name: LaserBeamDistortion
+  m_Shader: {fileID: -6465566751694194690, guid: c08356723d8e52840b263d18341d4d39, type: 3}
+  m_ShaderKeywords: 
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
-  m_CustomRenderQueue: 2000
-  stringTagMap:
-    RenderType: Opaque
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
   disabledShaderPasses: []
   m_SavedProperties:
     serializedVersion: 3
@@ -90,6 +89,14 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Floats:
+    - Vector1_4a739cbf5e654746a6ca73f139b41d3d: 0
+    - Vector1_67bbf00ee7ee4974b39733c87c11ffdd: 1
+    - Vector1_6844533d3d36461ba4c1a887480d590e: 0
+    - Vector1_b5f5a2cabfc04e898590c3ab48cc1543: 10.7
+    - Vector1_c2d550df8f144d978a60d423cd9490fe: 0
+    - Vector1_d731c5a03de74fb0b3ccd1adcf6adea0: 0
+    - Vector1_df1f47b34d5041729587dcabf7bf033d: 2
+    - Vector1_e5d9e79313c2422e8b8dd65a06fc3765: 1
     - _AlphaClip: 0
     - _Blend: 0
     - _BumpScale: 1
@@ -117,8 +124,9 @@ Material:
     - _WorkflowMode: 1
     - _ZWrite: 1
     m_Colors:
+    - Color_6356832df3984f148893a56ee7d30561: {r: 9.734288, g: 9.734288, b: 9.734288, a: 0.3764706}
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
-    - _EmissionColor: {r: 0, g: 1.8572822, b: 2, a: 1}
+    - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []
