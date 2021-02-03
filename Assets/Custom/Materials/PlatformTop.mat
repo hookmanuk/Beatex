@@ -9,7 +9,7 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: PlatformTop
   m_Shader: {fileID: 4800000, guid: faa2e9656df6ed24da82e297d25e047b, type: 3}
-  m_ShaderKeywords: RECEIVE_SHADOWS VRon _ENVIRONMENTREFLECTIONS_OFF
+  m_ShaderKeywords: BLUR RECEIVE_SHADOWS _ENVIRONMENTREFLECTIONS_OFF
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0

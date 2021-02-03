@@ -42,8 +42,10 @@ public class GameManager : MonoBehaviour
     public Nuke NukeSource;
     public SlowMotion SlowMotionSource;
     public Camera SpecatorCamera;
+    public GameObject PlatformTopThirdPerson;
+    public bool ThirdPersonMirror;
     public bool ResetToStartOnDeath = true;
-    public bool DebugPlay;
+    public bool DebugPlay;    
     public LaserBeam ActiveLaserBeam {get; set;}
     public int Wave { get; set; } = 0;
     private int _enemiesToSpawn = 3;
@@ -86,6 +88,11 @@ public class GameManager : MonoBehaviour
         // get the reference here...
         this.dl = dreamloLeaderBoard.GetSceneDreamloLeaderboard();
         CurrentScoreboard.SetActive(false);
+
+        if (!ThirdPersonMirror)
+        {
+            PlatformTopThirdPerson.SetActive(false);
+        }
 
         //for (int i = 0; i < 1000; i++)
         //{

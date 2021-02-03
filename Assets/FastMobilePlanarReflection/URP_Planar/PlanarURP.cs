@@ -30,6 +30,7 @@
         private Vector4 clipPlane;
         private Vector3 oldPosition;
         Vector3 eulerAngles;
+        public Camera SourceCamera;
 
 
         void OnEnable()
@@ -103,115 +104,119 @@
 
         void RenderObject(ScriptableRenderContext context, Camera cam)
         {
-            if (isRendering)
+            if (cam == SourceCamera)
             {
-                return;
-            }
 
-            isRendering = true;
-            posistion = transform.position;
-            normal = transform.up;
-
-            //MJH change to disable skybox
-            //reflectionCamera.clearFlags = cam.clearFlags;
-            reflectionCamera.clearFlags = CameraClearFlags.Color;
-            reflectionCamera.backgroundColor = cam.backgroundColor;
-            reflectionCamera.farClipPlane = cam.farClipPlane;
-            reflectionCamera.nearClipPlane = cam.nearClipPlane;
-            reflectionCamera.orthographic = cam.orthographic;
-            reflectionCamera.fieldOfView = cam.fieldOfView;
-            reflectionCamera.aspect = cam.aspect;
-            reflectionCamera.orthographicSize = cam.orthographicSize;
-
-            if (cam.clearFlags == CameraClearFlags.Skybox)
-            {
-                var sky = cam.GetComponent(typeof(Skybox)) as Skybox;
-                var mysky = reflectionCamera.GetComponent(typeof(Skybox)) as Skybox;
-                if (!sky || !sky.material)
+                if (isRendering)
                 {
-                    mysky.enabled = false;
+                    return;
+                }
+
+                isRendering = true;
+                posistion = transform.position;
+                normal = transform.up;
+
+                //MJH change to disable skybox
+                //reflectionCamera.clearFlags = cam.clearFlags;
+                reflectionCamera.clearFlags = CameraClearFlags.Color;
+                reflectionCamera.backgroundColor = cam.backgroundColor;
+                reflectionCamera.farClipPlane = cam.farClipPlane;
+                reflectionCamera.nearClipPlane = cam.nearClipPlane;
+                reflectionCamera.orthographic = cam.orthographic;
+                reflectionCamera.fieldOfView = cam.fieldOfView;
+                reflectionCamera.aspect = cam.aspect;
+                reflectionCamera.orthographicSize = cam.orthographicSize;
+
+                if (reflectionCamera.clearFlags == CameraClearFlags.Skybox)
+                {
+                    var sky = cam.GetComponent(typeof(Skybox)) as Skybox;
+                    var mysky = reflectionCamera.GetComponent(typeof(Skybox)) as Skybox;
+                    if (!sky || !sky.material)
+                    {
+                        mysky.enabled = false;
+                    }
+                    else
+                    {
+                        mysky.enabled = true;
+                        mysky.material = sky.material;
+                    }
+                }
+
+                reflectionPlane = new Vector4(normal.x, normal.y, normal.z, -Vector3.Dot(normal, posistion) - Offset);
+
+                reflectionMatrix.m00 = (1F - 2F * reflectionPlane[0] * reflectionPlane[0]);
+                reflectionMatrix.m01 = (-2F * reflectionPlane[0] * reflectionPlane[1]);
+                reflectionMatrix.m02 = (-2F * reflectionPlane[0] * reflectionPlane[2]);
+                reflectionMatrix.m03 = (-2F * reflectionPlane[3] * reflectionPlane[0]);
+                reflectionMatrix.m10 = (-2F * reflectionPlane[1] * reflectionPlane[0]);
+                reflectionMatrix.m11 = (1F - 2F * reflectionPlane[1] * reflectionPlane[1]);
+                reflectionMatrix.m12 = (-2F * reflectionPlane[1] * reflectionPlane[2]);
+                reflectionMatrix.m13 = (-2F * reflectionPlane[3] * reflectionPlane[1]);
+                reflectionMatrix.m20 = (-2F * reflectionPlane[2] * reflectionPlane[0]);
+                reflectionMatrix.m21 = (-2F * reflectionPlane[2] * reflectionPlane[1]);
+                reflectionMatrix.m22 = (1F - 2F * reflectionPlane[2] * reflectionPlane[2]);
+                reflectionMatrix.m23 = (-2F * reflectionPlane[3] * reflectionPlane[2]);
+                reflectionMatrix.m30 = 0F;
+                reflectionMatrix.m31 = 0F;
+                reflectionMatrix.m32 = 0F;
+                reflectionMatrix.m33 = 1F;
+
+                oldPosition = cam.transform.position;
+                reflectionCamera.worldToCameraMatrix = cam.worldToCameraMatrix * reflectionMatrix;
+
+                worldToCameraMatrix = reflectionCamera.worldToCameraMatrix;
+                clipNormal = worldToCameraMatrix.MultiplyVector(normal).normalized;
+                clipPlane = new Vector4(clipNormal.x, clipNormal.y, clipNormal.z, -Vector3.Dot(worldToCameraMatrix.MultiplyPoint(posistion + normal * Offset), clipNormal));
+
+                if (!VR)
+                {
+                    RenderObjectCamera(cam.projectionMatrix, false);
+                    material.DisableKeyword(vrString);
+                    GL.invertCulling = true;
+                    reflectionCamera.transform.position = reflectionMatrix.MultiplyPoint(oldPosition);
+                    eulerAngles = cam.transform.eulerAngles;
+                    reflectionCamera.transform.eulerAngles = new Vector3(0, eulerAngles.y, eulerAngles.z);
+                    UniversalRenderPipeline.RenderSingleCamera(context, reflectionCamera);
+                    reflectionCamera.transform.position = oldPosition;
+                    GL.invertCulling = false;
+                    material.SetTexture(reflectionTexString, reflectionTexture);
                 }
                 else
                 {
-                    mysky.enabled = true;
-                    mysky.material = sky.material;
+                    RenderObjectCamera(cam.GetStereoProjectionMatrix(Camera.StereoscopicEye.Left), false);
+                    material.EnableKeyword(vrString);
+                    GL.invertCulling = true;
+                    reflectionCamera.transform.position = reflectionMatrix.MultiplyPoint(oldPosition);
+                    eulerAngles = cam.transform.eulerAngles;
+                    reflectionCamera.transform.eulerAngles = new Vector3(0, eulerAngles.y, eulerAngles.z);
+                    UniversalRenderPipeline.RenderSingleCamera(context, reflectionCamera);
+                    reflectionCamera.transform.position = oldPosition;
+                    GL.invertCulling = false;
+                    material.SetTexture(reflectionTexString, reflectionTexture);
+                    RenderObjectCamera(cam.GetStereoProjectionMatrix(Camera.StereoscopicEye.Right), true);
+                    GL.invertCulling = true;
+                    reflectionCamera.transform.position = reflectionMatrix.MultiplyPoint(oldPosition);
+                    eulerAngles = cam.transform.eulerAngles;
+                    reflectionCamera.transform.eulerAngles = new Vector3(0, eulerAngles.y, eulerAngles.z);
+                    UniversalRenderPipeline.RenderSingleCamera(context, reflectionCamera);
+                    reflectionCamera.transform.position = oldPosition;
+                    GL.invertCulling = false;
+                    material.SetTexture(reflectionTexRString, reflectionTextureRight);
                 }
+
+                material.SetFloat(reflectionAlphaString, ReflectionAlpha);
+
+                if (BlurredReflection)
+                {
+                    material.EnableKeyword(blurString);
+                }
+                else
+                {
+                    material.DisableKeyword(blurString);
+                }
+
+                isRendering = false;
             }
-
-            reflectionPlane = new Vector4(normal.x, normal.y, normal.z, -Vector3.Dot(normal, posistion) - Offset);
-
-            reflectionMatrix.m00 = (1F - 2F * reflectionPlane[0] * reflectionPlane[0]);
-            reflectionMatrix.m01 = (-2F * reflectionPlane[0] * reflectionPlane[1]);
-            reflectionMatrix.m02 = (-2F * reflectionPlane[0] * reflectionPlane[2]);
-            reflectionMatrix.m03 = (-2F * reflectionPlane[3] * reflectionPlane[0]);
-            reflectionMatrix.m10 = (-2F * reflectionPlane[1] * reflectionPlane[0]);
-            reflectionMatrix.m11 = (1F - 2F * reflectionPlane[1] * reflectionPlane[1]);
-            reflectionMatrix.m12 = (-2F * reflectionPlane[1] * reflectionPlane[2]);
-            reflectionMatrix.m13 = (-2F * reflectionPlane[3] * reflectionPlane[1]);
-            reflectionMatrix.m20 = (-2F * reflectionPlane[2] * reflectionPlane[0]);
-            reflectionMatrix.m21 = (-2F * reflectionPlane[2] * reflectionPlane[1]);
-            reflectionMatrix.m22 = (1F - 2F * reflectionPlane[2] * reflectionPlane[2]);
-            reflectionMatrix.m23 = (-2F * reflectionPlane[3] * reflectionPlane[2]);
-            reflectionMatrix.m30 = 0F;
-            reflectionMatrix.m31 = 0F;
-            reflectionMatrix.m32 = 0F;
-            reflectionMatrix.m33 = 1F;
-
-            oldPosition = cam.transform.position;
-            reflectionCamera.worldToCameraMatrix = cam.worldToCameraMatrix * reflectionMatrix;
-
-            worldToCameraMatrix = reflectionCamera.worldToCameraMatrix;
-            clipNormal = worldToCameraMatrix.MultiplyVector(normal).normalized;
-            clipPlane = new Vector4(clipNormal.x, clipNormal.y, clipNormal.z, -Vector3.Dot(worldToCameraMatrix.MultiplyPoint(posistion + normal * Offset), clipNormal));
-
-            if (!VR)
-            {
-                RenderObjectCamera(cam.projectionMatrix, false);
-                material.DisableKeyword(vrString);
-                GL.invertCulling = true;
-                reflectionCamera.transform.position = reflectionMatrix.MultiplyPoint(oldPosition);
-                eulerAngles = cam.transform.eulerAngles;
-                reflectionCamera.transform.eulerAngles = new Vector3(0, eulerAngles.y, eulerAngles.z);
-                UniversalRenderPipeline.RenderSingleCamera(context, reflectionCamera);
-                reflectionCamera.transform.position = oldPosition;
-                GL.invertCulling = false;
-                material.SetTexture(reflectionTexString, reflectionTexture);
-            }
-            else
-            {
-                RenderObjectCamera(cam.GetStereoProjectionMatrix(Camera.StereoscopicEye.Left), false);
-                material.EnableKeyword(vrString);
-                GL.invertCulling = true;
-                reflectionCamera.transform.position = reflectionMatrix.MultiplyPoint(oldPosition);
-                eulerAngles = cam.transform.eulerAngles;
-                reflectionCamera.transform.eulerAngles = new Vector3(0, eulerAngles.y, eulerAngles.z);
-                UniversalRenderPipeline.RenderSingleCamera(context, reflectionCamera);
-                reflectionCamera.transform.position = oldPosition;
-                GL.invertCulling = false;
-                material.SetTexture(reflectionTexString, reflectionTexture);
-                RenderObjectCamera(cam.GetStereoProjectionMatrix(Camera.StereoscopicEye.Right), true);
-                GL.invertCulling = true;
-                reflectionCamera.transform.position = reflectionMatrix.MultiplyPoint(oldPosition);
-                eulerAngles = cam.transform.eulerAngles;
-                reflectionCamera.transform.eulerAngles = new Vector3(0, eulerAngles.y, eulerAngles.z);
-                UniversalRenderPipeline.RenderSingleCamera(context, reflectionCamera);
-                reflectionCamera.transform.position = oldPosition;
-                GL.invertCulling = false;
-                material.SetTexture(reflectionTexRString, reflectionTextureRight);
-            }
-
-            material.SetFloat(reflectionAlphaString, ReflectionAlpha);
-
-            if (BlurredReflection)
-            {
-                material.EnableKeyword(blurString);
-            }
-            else
-            {
-                material.DisableKeyword(blurString);
-            }
-
-            isRendering = false;
         }
 
         void RemoveObject(Object obj)
