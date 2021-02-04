@@ -5,7 +5,8 @@ using UnityEngine;
 public class Enemy : MonoBehaviour
 {
     public EnemyType Type;
-    public ParticleSystem DeathParticleSystem;    
+    public ParticleSystem[] DeathParticleSystems;
+    public ParticleSystem[] HitParticleSystems;
     private float _msSinceShot = 0;
     public bool IsHit = false;
     protected float _hitRate;
@@ -181,6 +182,14 @@ public class Enemy : MonoBehaviour
                 extraDissolved = 0.1f;
             }
 
+            if (HitParticleSystems != null)
+            {
+                foreach (var item in HitParticleSystems)
+                {
+                    item.Play();
+                }
+            }
+
             while (t < 0.1f)
             {
                 ((Mothership)this).MothershipMesh.materials[1].SetFloat("DISSOLVED", fromDissolved + (extraDissolved / 0.1f * t));
@@ -190,6 +199,14 @@ public class Enemy : MonoBehaviour
         }
         else
         {
+            if (HitParticleSystems != null)
+            {             
+                foreach (var item in HitParticleSystems)
+                {
+                    item.Play();
+                }
+            }
+
             var material = GetComponentInChildren<MeshRenderer>().material;
             var col = material.GetColor("_EmissionColor");
 
@@ -232,16 +249,19 @@ public class Enemy : MonoBehaviour
         //    yield return new WaitForSeconds(0.01f);
         //    t += 0.01f;
         //}
-
-        if (DeathParticleSystem != null)
+        if (DeathParticleSystems != null)
         {
-            DeathParticleSystem.Play();
+            foreach (var item in DeathParticleSystems)
+            {
+                //item.Simulate(0,true,true);
+                item.Play();
+            }
         }
         foreach (var item in GetComponentsInChildren<MeshRenderer>())
         {
             item.enabled = false;
         }
-        
+
         yield return new WaitForSeconds(1f);
 
         GameObject.Destroy(this.gameObject);        
