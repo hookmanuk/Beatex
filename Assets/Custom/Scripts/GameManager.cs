@@ -43,6 +43,8 @@ public class GameManager : MonoBehaviour
     public SlowMotion SlowMotionSource;
     public Camera SpecatorCamera;
     public GameObject PlatformTopThirdPerson;
+    public GameObject Platform;
+    public GameObject Scoreboard;
     public bool ThirdPersonMirror;
     public bool ResetToStartOnDeath = true;
     public bool DebugPlay;    
@@ -116,6 +118,29 @@ public class GameManager : MonoBehaviour
         if (!VolumeProfile.TryGet(out _channelMixer)) throw new System.NullReferenceException(nameof(_channelMixer));
         _channelMixer.active = false;
 
+        //List<InputDevice> inputDevices = new List<InputDevice>();        
+        //InputDevices.GetDevicesWithCharacteristics(InputDeviceCharacteristics.HeadMounted, inputDevices);
+        //InputDevice hMDDevice = inputDevices[0];
+        //XRInputSubsystem XRIS = hMDDevice.subsystem;
+        //List<Vector3> boundaryPoints = new List<Vector3>();
+        //XRIS.TryGetBoundaryPoints(boundaryPoints);
+
+        List<XRInputSubsystem> inputSubsystems = new List<XRInputSubsystem>();
+        SubsystemManager.GetInstances<XRInputSubsystem>(inputSubsystems);
+        if (inputSubsystems.Count > 0)
+        {
+            List<Vector3> boundary = new List<Vector3>();
+            if (inputSubsystems[0].TryGetBoundaryPoints(boundary))
+            {
+                // boundary is now filled with the current sequence of boundary points
+                var bounds = GeometryUtility.CalculateBounds(boundary.ToArray(), transform.localToWorldMatrix);
+                Platform.transform.localScale = bounds.extents + Vector3.up * 0.53f;
+                Scoreboard.transform.position = new Vector3(0, 0.6f, bounds.extents.z / 2 + 1.1f);
+                //bounds.size
+            }
+        }
+
+
         if (DebugPlay)
         {
             StartGame();
@@ -124,6 +149,11 @@ public class GameManager : MonoBehaviour
         {
             StartCoroutine(ShowScores());
         }
+    }
+
+    private void XRDevice_deviceLoaded(string obj)
+    {
+        throw new NotImplementedException();
     }
 
     //code for boundaries... untested, draw platform to size of boundaries
