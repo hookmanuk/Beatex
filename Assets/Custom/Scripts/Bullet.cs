@@ -20,37 +20,37 @@ public class Bullet : MonoBehaviour
         _rigidBody = GetComponent<Rigidbody>();
     }
 
-    private void FixedUpdate()
-    {        
-        if (GameManager.Instance.IsOnBeat)
-        {
-            //transform.position += Direction * 0.2f * Time.deltaTime * GameManager.Instance.Speed;            
-            //transform.position += Direction * 0.1f * GameManager.Instance.Speed;
-            StartCoroutine(Move());            
-        }
-    }
+    //private void FixedUpdate()
+    //{        
+    //    if (GameManager.Instance.IsOnBeat)
+    //    {
+    //        //transform.position += Direction * 0.2f * Time.deltaTime * GameManager.Instance.Speed;            
+    //        //transform.position += Direction * 0.1f * GameManager.Instance.Speed;
+    //        StartCoroutine(Move());            
+    //    }
+    //}
 
-    IEnumerator Move()
-    {
-        float t = 0;        
-        while (t < 0.1)
-        {
-            _rigidBody.position += Direction * 1f * Time.deltaTime;
-            t += Time.deltaTime;
-            yield return new WaitForSeconds(0.01f);
-        }
+    //IEnumerator Move()
+    //{
+    //    float t = 0;        
+    //    while (t < 0.1)
+    //    {
+    //        _rigidBody.position += Direction * 1f * Time.deltaTime;
+    //        t += Time.deltaTime;
+    //        yield return new WaitForSeconds(0.01f);
+    //    }
 
-        if (transform.position.y < 0)
-        {
-            this.gameObject.SetActive(false);
-        }
-        else if (Math.Abs(transform.position.x) > 4)
-        {
-            this.gameObject.SetActive(false);
-        }
-        else if (Math.Abs(transform.position.z) > 4)
-        {
-            this.gameObject.SetActive(false);
-        }
-    }
+    //    if (transform.position.y < 0)
+    //    {
+    //        this.gameObject.SetActive(false);
+    //    }
+    //    else if (Math.Abs(transform.position.x) > 4)
+    //    {
+    //        this.gameObject.SetActive(false);
+    //    }
+    //    else if (Math.Abs(transform.position.z) > 4)
+    //    {
+    //        this.gameObject.SetActive(false);
+    //    }
+    //}
 }

@@ -8,8 +8,8 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: BulletRed
-  m_Shader: {fileID: -6465566751694194690, guid: b2a77b7210d0cec4fae87976dfc43bfe, type: 3}
-  m_ShaderKeywords: 
+  m_Shader: {fileID: -6465566751694194690, guid: f94436ba3a113784289998bb31a56295, type: 3}
+  m_ShaderKeywords: _EMISSION
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
@@ -76,7 +76,9 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Floats:
-    - Vector1_22b79efc0f164cfc85bb6cc93c5557fd: 16.41
+    - Vector1_22b79efc0f164cfc85bb6cc93c5557fd: 0.62
+    - Vector1_35f1416eeec64b038fe55c888a029377: 6
+    - Vector1_36626a035d8e4246a4ba27ee7298a45a: 0.93
     - _AlphaClip: 0
     - _Blend: 0
     - _BumpScale: 1
@@ -104,7 +106,8 @@ Material:
     - _WorkflowMode: 1
     - _ZWrite: 1
     m_Colors:
-    - Color_5a1fc795f4344a0a821526fcb971cd91: {r: 1, g: 0, b: 0, a: 1}
+    - Color_5a1fc795f4344a0a821526fcb971cd91: {r: 3.6886053, g: 0.23174484, b: 0, a: 1}
+    - Color_b60b697a538541a49c3cfaa3a92da3b8: {r: 1, g: 0.029372662, b: 0, a: 0}
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
