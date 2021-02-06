@@ -47,7 +47,9 @@ public class GameManager : MonoBehaviour
     public GameObject Scoreboard;
     public bool ThirdPersonMirror;
     public bool ResetToStartOnDeath = true;
-    public bool DebugPlay;    
+    public bool DebugPlay;
+    public Material Skybox;
+
     public LaserBeam ActiveLaserBeam {get; set;}
     public int Wave { get; set; } = 0;
     private int _enemiesToSpawn = 3;
@@ -62,14 +64,14 @@ public class GameManager : MonoBehaviour
     public bool IsOnBeat { get; set; } = false;
     private GameObject _sightLine;
     private object _destroyer = null;
-    private Vignette _vignette;
-    private ChannelMixer _channelMixer;
+    private Vignette _vignette;    
     private int _waveWarnsPlayed = 0;
     private Vector3[] _spawnPositions = null;
     private Vector3 _centralSpawnPoint;
     private SpawnParticles _spawnParticles;
     public int ComboMultiplier = 0;
     public int Score = 0;
+    private float _startTime;
 
     public List<Enemy> EnemiesHit = new List<Enemy>();
     dreamloLeaderBoard dl; //http://dreamlo.com/lb/3wAj4tobOEuqRbj6b88HjgrqDHY0wK_UCkp0R3ncu2vQ
@@ -94,6 +96,7 @@ public class GameManager : MonoBehaviour
         if (!ThirdPersonMirror)
         {
             PlatformTopThirdPerson.SetActive(false);
+            SpecatorCamera.enabled = false;
         }
 
         //for (int i = 0; i < 1000; i++)
@@ -115,9 +118,6 @@ public class GameManager : MonoBehaviour
         if (!VolumeProfile.TryGet(out _vignette)) throw new System.NullReferenceException(nameof(_vignette));
         _vignette.intensity.Override(0);
 
-        if (!VolumeProfile.TryGet(out _channelMixer)) throw new System.NullReferenceException(nameof(_channelMixer));
-        _channelMixer.active = false;
-
         //List<InputDevice> inputDevices = new List<InputDevice>();        
         //InputDevices.GetDevicesWithCharacteristics(InputDeviceCharacteristics.HeadMounted, inputDevices);
         //InputDevice hMDDevice = inputDevices[0];
@@ -135,11 +135,12 @@ public class GameManager : MonoBehaviour
                 // boundary is now filled with the current sequence of boundary points
                 var bounds = GeometryUtility.CalculateBounds(boundary.ToArray(), transform.localToWorldMatrix);
                 Platform.transform.localScale = bounds.extents + Vector3.up * 0.53f;
-                Scoreboard.transform.position = new Vector3(0, 0.6f, bounds.extents.z / 2 + 1.1f);
+                Scoreboard.transform.position = new Vector3(0, 0.49f, bounds.extents.z / 2 + 1.1f);
                 //bounds.size
             }
         }
 
+        _startTime = Time.time;
 
         if (DebugPlay)
         {
@@ -208,6 +209,8 @@ public class GameManager : MonoBehaviour
                 EnemySpawnCheck();
             }
         }
+
+        RenderSettings.skybox.SetFloat("_Rotation", (Time.time - _startTime + 210f) * 1);
     }
 
     private void RefreshRateCheck()
@@ -221,16 +224,7 @@ public class GameManager : MonoBehaviour
 
     public void SetTimeAbsolute(float timeScale)
     {
-        Time.timeScale = timeScale;
-
-        if (timeScale < 1)
-        {
-            _channelMixer.active = true;
-        }
-        else
-        {
-            _channelMixer.active = false;
-        }
+        Time.timeScale = timeScale;        
     }
 
     public IEnumerator SetTime(float timeScale)
