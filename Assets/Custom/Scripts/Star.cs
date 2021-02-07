@@ -15,7 +15,7 @@ public class Star : MonoBehaviour
     // Update is called once per frame
     void FixedUpdate()
     {
-        transform.RotateAround(Vector3.zero, Vector3.right, Speed * Time.deltaTime);
+        transform.RotateAround(Vector3.zero, Vector3.right, Speed * Time.deltaTime * GameManager.Instance.DayNightCycleSpeed);
         transform.LookAt(Vector3.zero);
 
         if (transform.position.y < -11f)

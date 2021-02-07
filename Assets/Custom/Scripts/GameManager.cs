@@ -45,10 +45,12 @@ public class GameManager : MonoBehaviour
     public GameObject PlatformTopThirdPerson;
     public GameObject Platform;
     public GameObject Scoreboard;
+    public GameType GameType;
+    public SelectStart[] SelectStartTypes;
     public bool ThirdPersonMirror;
     public bool ResetToStartOnDeath = true;
     public bool DebugPlay;
-    public Material Skybox;
+    public float DayNightCycleSpeed;
 
     public LaserBeam ActiveLaserBeam {get; set;}
     public int Wave { get; set; } = 0;
@@ -206,11 +208,18 @@ public class GameManager : MonoBehaviour
 
                 BeamShootCheck();
 
-                EnemySpawnCheck();
+                if (GameType == GameType.Challenge)
+                {
+                    EnemySpawnCheck();
+                }
+                else if (GameType == GameType.Arcade)
+                {
+                    //Arcade Mode here!
+                }
             }
         }
 
-        RenderSettings.skybox.SetFloat("_Rotation", (Time.time - _startTime + 210f) * 1);
+        RenderSettings.skybox.SetFloat("_Rotation", ((Time.time - _startTime) * DayNightCycleSpeed + 210f));
     }
 
     private void RefreshRateCheck()
@@ -671,8 +680,16 @@ public class GameManager : MonoBehaviour
     {
         if (!IsStarted)
         {
+            DayNightCycleSpeed = 1;
+
             CurrentScoreboard.SetActive(true);
             HighScoreboard.SetActive(false);
+
+            foreach (var item in SelectStartTypes)
+            {
+                item.gameObject.SetActive(false);
+            }
+
             Score = 0;
             ComboMultiplier = 0;
             Wave = 0;
@@ -723,6 +740,14 @@ public class GameManager : MonoBehaviour
         {
             CurrentScoreboard.SetActive(false);
             HighScoreboard.SetActive(true);
+
+            UFO.gameObject.transform.position = new Vector3(0, 1.1f, 0);
+
+            foreach (var item in SelectStartTypes)
+            {
+                item.gameObject.SetActive(true);
+            }            
+
             IsStarted = false;
             AudioManager.Instance.MusicSource.Stop();
 
