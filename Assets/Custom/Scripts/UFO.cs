@@ -1,12 +1,13 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.XR.Interaction.Toolkit;
 
 public class UFO : MonoBehaviour
 {
     public GameObject Gun;
     public GameObject Body;
-    public bool GunVisible { get; set; } = false;
+    public bool GunVisible { get; set; } = true;
 
     private Vector3 _gunPosition;
 
@@ -14,16 +15,31 @@ public class UFO : MonoBehaviour
     void Start()
     {
         //_gunPosition = Gun.transform.localPosition;
+        GetComponent<XRGrabInteractable>().onSelectEntered.AddListener(Selected);
+        GetComponent<XRGrabInteractable>().onSelectExited.AddListener(Unselected);
+    }
+
+    public void Selected(XRBaseInteractor interactor)
+    {
+        GameManager.Instance.SetPrimaryController(interactor.gameObject);
+    }
+
+    public void Unselected(XRBaseInteractor interactor)
+    {        
+        if (GameManager.Instance.SecondaryHand != null)
+        {
+            GameManager.Instance.SecondaryHand.SetActive(true);
+        }
     }
 
     // Update is called once per frame
     void FixedUpdate()
     {
-        if (GameManager.Instance.IsStarted && GunVisible)
+        if (GunVisible && GameManager.Instance.PrimaryController != null)
         {
             //Gun.transform.position = Body.transform.position + _gunPosition * 0.03f;
 
-            var targetDirection = (GameManager.Instance.RightController.transform.position - GameManager.Instance.LeftController.transform.position).normalized;
+            var targetDirection = (GameManager.Instance.SecondaryController.transform.position - GameManager.Instance.PrimaryController.transform.position).normalized;
 
             if (targetDirection != Vector3.zero)
             {
@@ -49,4 +65,6 @@ public class UFO : MonoBehaviour
             Gun.SetActive(false);
         }
     }
+
+    
 }

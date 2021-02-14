@@ -19,6 +19,9 @@ public class GameManager : MonoBehaviour
     public Bullet BlueBulletSource;
     public GameObject LeftController;
     public GameObject RightController;
+    public GameObject PrimaryController;
+    public GameObject SecondaryController;
+    public GameObject SecondaryHand;
     public GameObject SightLineSource;
     public UFO UFO;
     public Enemy EnemyRedSource;
@@ -152,6 +155,25 @@ public class GameManager : MonoBehaviour
         else
         {
             StartCoroutine(ShowScores());
+        }
+    }
+
+    public void SetPrimaryController(GameObject primary)
+    {
+        PrimaryController = primary;
+
+        if (PrimaryController == LeftController)
+        {
+            SecondaryController = RightController;
+        }
+        else
+        {
+            SecondaryController = LeftController;
+        }
+        if (SecondaryController.GetComponentInChildren<Controller>() != null)
+        {
+            SecondaryHand = SecondaryController.GetComponentInChildren<Controller>().gameObject;
+            SecondaryHand.SetActive(false);
         }
     }
 
@@ -657,7 +679,7 @@ public class GameManager : MonoBehaviour
     IEnumerator ShootBeam()
     {
         ActiveLaserBeam.transform.position = UFO.transform.position;
-        var beamDirection = (RightController.transform.position - UFO.transform.position).normalized;
+        var beamDirection = (SecondaryController.transform.position - UFO.transform.position).normalized;
         //yield return new WaitForSeconds(0.1f);
         
         GameObject firstHitObject = null;
@@ -773,12 +795,7 @@ public class GameManager : MonoBehaviour
             ComboMultiplier = 0;
             Wave = 0;
             IsStarted = true;
-            ScoreboardText.UpdateText(Score);
-
-            if (RightController.GetComponentInChildren<Controller>() != null)
-            {
-                RightController.GetComponentInChildren<Controller>().gameObject.SetActive(false);
-            }
+            ScoreboardText.UpdateText(Score);            
 
             //_sightLine = GameObject.Instantiate(SightLineSource);
             //_sightLine.SetActive(true);
@@ -790,17 +807,14 @@ public class GameManager : MonoBehaviour
                 switch (GameType)
                 {
                     case GameType.Arcade:
-                        _enemiesToSpawn = 3;
-                        UFO.ToggleGunVisibility(true);
+                        _enemiesToSpawn = 3;                        
                         break;
                     case GameType.Challenge:
-                        _enemiesToSpawn = 3;
-                        UFO.ToggleGunVisibility(true);
+                        _enemiesToSpawn = 3;                        
                         break;
                     case GameType.Pacifism:
                         _enemiesToSpawn = 1;
-                        _pacifyCount = 0;
-                        UFO.ToggleGunVisibility(false);
+                        _pacifyCount = 0;                        
                         break;
                     default:
                         break;
@@ -837,8 +851,7 @@ public class GameManager : MonoBehaviour
             CurrentScoreboard.SetActive(false);
             HighScoreboard.SetActive(true);
 
-            UFO.gameObject.transform.position = new Vector3(0, 1.1f, 0);
-            UFO.ToggleGunVisibility(false);
+            UFO.gameObject.transform.position = new Vector3(0, 1.1f, 0);            
 
             foreach (var item in SelectStartTypes)
             {
