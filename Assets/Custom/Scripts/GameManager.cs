@@ -74,6 +74,7 @@ public class GameManager : MonoBehaviour
     public int ComboMultiplier = 0;
     public int Score = 0;
     private float _startTime;
+    public int _pacifyCount = 0;
 
     public List<Enemy> EnemiesHit = new List<Enemy>();
     dreamloLeaderBoard dl; //http://dreamlo.com/lb/3wAj4tobOEuqRbj6b88HjgrqDHY0wK_UCkp0R3ncu2vQ
@@ -206,15 +207,22 @@ public class GameManager : MonoBehaviour
 
                 BeatCheck();
 
-                BeamShootCheck();
+                if (GameType == GameType.Challenge || GameType == GameType.Arcade)
+                {
+                    BeamShootCheck();
+                }
 
                 if (GameType == GameType.Challenge)
                 {
-                    EnemySpawnCheck();
+                    ChallengeEnemySpawnCheck();
                 }
                 else if (GameType == GameType.Arcade)
                 {
                     //Arcade Mode here!
+                }
+                else if (GameType == GameType.Pacifism)
+                {
+                    PacifismEnemySpawnCheck();
                 }
             }
         }
@@ -339,7 +347,7 @@ public class GameManager : MonoBehaviour
         }        
     }
 
-    private void EnemySpawnCheck()
+    private void ChallengeEnemySpawnCheck()
     {        
         if (_waveWarnsPlayed == 0 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 11)) //on 11th beat
         {
@@ -459,6 +467,77 @@ public class GameManager : MonoBehaviour
             AudioManager.Instance.PlayWaveNo();
             Wave++;
             StartCoroutine(ShowText("Wave " + Wave.ToString(), TextType.PlayerInfo));
+        }
+        else
+        {
+            _secsSinceEnemySpawn += Time.deltaTime * GameManager.Instance.Speed;
+        }
+    }
+
+    private void PacifismEnemySpawnCheck()
+    {
+        if (_secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 8)) //on 8th beat
+        {
+            //Calculate positions for spawns
+            _spawnPositions = new Vector3[_enemiesToSpawn];
+            _centralSpawnPoint = UFO.transform.position + GetRandomPosition(2, 3);
+
+            for (int i = 0; i < _enemiesToSpawn; i++)
+            {
+                _spawnPositions[i] = UnityEngine.Random.insideUnitSphere * 1.25f + _centralSpawnPoint;
+            }            
+
+            //set the audio source to play where the wave will spawn
+            WaveAudioSource.gameObject.transform.position = _centralSpawnPoint;
+            AudioManager.Instance.PlayWaveStart(WaveAudioSource);
+
+            _secsSinceEnemySpawn = 0;
+            Enemy enemySpawn = null;
+
+            //spawn enemies
+            for (int i = 0; i < _enemiesToSpawn; i++)
+            {
+                switch (UnityEngine.Random.Range((int)0, (int)4).ToString())
+                {
+                    case "3":
+                        enemySpawn = EnemyRedSource;
+                        break;
+                    case "0":
+                    case "1":
+                    case "2":
+                        enemySpawn = EnemyGreenSource;
+                        break;                    
+                    default:
+                        break;
+                }
+
+                enemySpawn = GameObject.Instantiate(enemySpawn);
+                enemySpawn.gameObject.SetActive(true);
+                enemySpawn.gameObject.transform.position = _spawnPositions[i];
+                enemySpawn.gameObject.transform.rotation = Quaternion.LookRotation((enemySpawn.gameObject.transform.position - UFO.transform.position).normalized); //rotate to look at UFO
+            }
+
+            //if (Math.IEEERemainder(_pacifyCount, 4) == 1)
+            //{
+            //    Mothership mothership = Instantiate(EnemyMothershipSource);
+            //    mothership.gameObject.SetActive(true);
+            //    mothership.gameObject.transform.position = WaveAudioSource.gameObject.transform.position * 1.3f;
+            //    mothership.gameObject.transform.rotation = Quaternion.LookRotation((mothership.gameObject.transform.position - UFO.transform.position).normalized); //rotate to look at UFO
+
+            //    StartCoroutine(ShowText("Mothership Spawned", TextType.PlayerInfo));
+            //}
+
+            if (Math.IEEERemainder(_pacifyCount, 8) == 4)            
+            {                
+                Nuke nuke = Instantiate(NukeSource);
+                nuke.gameObject.SetActive(true);
+                nuke.gameObject.transform.position = GetRandomPosition(0.5f, 1f, 0.5f, 1.5f);
+
+                StartCoroutine(ShowText("Nuke Deployed", TextType.PlayerInfo));
+            }
+
+            _pacifyCount++;
+            _secsSinceEnemySpawn = 0;
         }
         else
         {
@@ -708,7 +787,24 @@ public class GameManager : MonoBehaviour
             _waveWarnsPlayed = 0;
             if (ResetToStartOnDeath)
             {
-                _enemiesToSpawn = 3;
+                switch (GameType)
+                {
+                    case GameType.Arcade:
+                        _enemiesToSpawn = 3;
+                        UFO.ToggleGunVisibility(true);
+                        break;
+                    case GameType.Challenge:
+                        _enemiesToSpawn = 3;
+                        UFO.ToggleGunVisibility(true);
+                        break;
+                    case GameType.Pacifism:
+                        _enemiesToSpawn = 1;
+                        _pacifyCount = 0;
+                        UFO.ToggleGunVisibility(false);
+                        break;
+                    default:
+                        break;
+                }                
             }
 
             try
@@ -742,6 +838,7 @@ public class GameManager : MonoBehaviour
             HighScoreboard.SetActive(true);
 
             UFO.gameObject.transform.position = new Vector3(0, 1.1f, 0);
+            UFO.ToggleGunVisibility(false);
 
             foreach (var item in SelectStartTypes)
             {

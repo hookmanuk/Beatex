@@ -275,7 +275,7 @@ public class Enemy : MonoBehaviour
         switch (Type)
         {
             case EnemyType.Green:
-                vector = Quaternion.AngleAxis(-80, Vector3.up) * (GameManager.Instance.UFO.transform.position - transform.position).normalized;                
+                vector = Quaternion.AngleAxis(-70, Vector3.up) * (GameManager.Instance.UFO.transform.position - transform.position).normalized;                
                 while (t < 0.1)
                 {
                     transform.position += vector * 1.5f * Time.deltaTime;

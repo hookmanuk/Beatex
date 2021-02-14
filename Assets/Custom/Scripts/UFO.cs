@@ -6,6 +6,7 @@ public class UFO : MonoBehaviour
 {
     public GameObject Gun;
     public GameObject Body;
+    public bool GunVisible { get; set; } = false;
 
     private Vector3 _gunPosition;
 
@@ -18,7 +19,7 @@ public class UFO : MonoBehaviour
     // Update is called once per frame
     void FixedUpdate()
     {
-        if (GameManager.Instance.IsStarted)
+        if (GameManager.Instance.IsStarted && GunVisible)
         {
             //Gun.transform.position = Body.transform.position + _gunPosition * 0.03f;
 
@@ -30,6 +31,22 @@ public class UFO : MonoBehaviour
             }
             
         }
+        else
+        {
+            //rotate based on movement direction instead?
+        }
         //Body.transform.rotation = Quaternion.LookRotation(new Vector3(targetDirection.x, targetDirection.y, targetDirection.z));
+    }
+
+    public void ToggleGunVisibility(bool blnShowGun)
+    {
+        if (blnShowGun)
+        {
+            Gun.SetActive(true);
+        }
+        else
+        {
+            Gun.SetActive(false);
+        }
     }
 }

@@ -14,7 +14,9 @@ public class SelectStart : MonoBehaviour
                 case "Arcade":
                     return GameType.Arcade;                    
                 case "Challenge":
-                    return GameType.Challenge;                    
+                    return GameType.Challenge;
+                case "Pacifism":
+                    return GameType.Pacifism;
                 default:
                     return GameType.Challenge;
             }
@@ -45,5 +47,6 @@ public class SelectStart : MonoBehaviour
 public enum GameType
 {
     Arcade,
-    Challenge
+    Challenge,
+    Pacifism
 }
