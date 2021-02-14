@@ -284,13 +284,13 @@ public class Enemy : MonoBehaviour
                 }
                 break;
             case EnemyType.Red:
-                vector = (GameManager.Instance.UFO.transform.position - transform.position).normalized;                
-                while (t < 0.1)
-                {
-                    transform.position += vector * 1.5f * Time.deltaTime;
-                    t += Time.deltaTime;
-                    yield return new WaitForSeconds(0.01f);
-                }
+                //vector = (GameManager.Instance.UFO.transform.position - transform.position).normalized;                
+                //while (t < 0.1)
+                //{
+                //    transform.position += vector * 1.5f * Time.deltaTime;
+                //    t += Time.deltaTime;
+                //    yield return new WaitForSeconds(0.01f);
+                //}
                 break;
             case EnemyType.Blue:
                 break;
