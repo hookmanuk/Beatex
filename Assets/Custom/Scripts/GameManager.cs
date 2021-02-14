@@ -19,9 +19,10 @@ public class GameManager : MonoBehaviour
     public Bullet BlueBulletSource;
     public GameObject LeftController;
     public GameObject RightController;
-    public GameObject PrimaryController;
-    public GameObject SecondaryController;
-    public GameObject SecondaryHand;
+    public GameObject RightPointer;
+    public GameObject PrimaryController { get; set; }
+    public GameObject SecondaryController { get; set; }
+    public GameObject SecondaryHand { get; set; }
     public GameObject SightLineSource;
     public UFO UFO;
     public Enemy EnemyRedSource;
@@ -49,13 +50,15 @@ public class GameManager : MonoBehaviour
     public GameObject Platform;
     public GameObject Scoreboard;
     public GameType GameType;
-    public SelectStart[] SelectStartTypes;
+    public HighScores HighScores;
+    public SelectStart[] SelectStartTypes;   
     public bool ThirdPersonMirror;
     public bool ResetToStartOnDeath = true;
     public bool DebugPlay;
     public float DayNightCycleSpeed;
 
     public LaserBeam ActiveLaserBeam {get; set;}
+    public string SelectedLetter { get; set; }
     public int Wave { get; set; } = 0;
     private int _enemiesToSpawn = 3;
     public float Speed = 1f;
@@ -154,7 +157,8 @@ public class GameManager : MonoBehaviour
         }
         else
         {
-            StartCoroutine(ShowScores());
+            HighScores.SetMode(HighScores.ScoreMode);
+            //StartCoroutine(ShowScores());
         }
     }
 
@@ -879,18 +883,39 @@ public class GameManager : MonoBehaviour
                 Destroy(item.gameObject);
             }
 
-            SubmitScore();
-            StartCoroutine(ShowScores());
+            LastScoreText.UpdateText(Score);
+
+            HighScores.SetMode(ScoreMode.Entry);
+
+            //SubmitScore();
+            //StartCoroutine(ShowScores());
         }
     }
 
-    private void SubmitScore()
+    public void SaveScore(string name)
     {
-        LastScoreText.UpdateText(Score);
-        dl.AddScore(SystemInfo.deviceUniqueIdentifier.Substring(0,12), Score);
+        SubmitScore(name);        
     }
 
-    private IEnumerator ShowScores()
+    public void ClearForScoreEntry(bool clear)
+    {
+        foreach (var item in SelectStartTypes)
+        {
+            item.gameObject.SetActive(!clear);
+        }
+
+        UFO.gameObject.SetActive(!clear);
+        
+        RightController.SetActive(!clear);
+        RightPointer.SetActive(clear);
+    }
+
+    private void SubmitScore(string name)
+    {        
+        dl.AddScore(name, Score);
+    }
+
+    public IEnumerator ShowScores()
     {
         //Debug.Log("Getting Scores")
         dl.GetScores();
@@ -913,13 +938,13 @@ public class GameManager : MonoBehaviour
                 int count = 0;
                 string strScores = "";
 
-                var currentPlayerScore = scoreList.Where(s => s.playerName.Substring(0, 12) == SystemInfo.deviceUniqueIdentifier.Substring(0, 12) && s.score < Score).FirstOrDefault();
+                //var currentPlayerScore = scoreList.Where(s => s.playerName.Substring(0, 12) == SystemInfo.deviceUniqueIdentifier.Substring(0, 12) && s.score < Score).FirstOrDefault();
 
-                if (currentPlayerScore.score > 0)
-                {
-                    currentPlayerScore.score = Score;
-                    scoreList = scoreList.OrderByDescending(s => s.score).ToList();
-                }
+                //if (currentPlayerScore.score > 0)
+                //{
+                //    currentPlayerScore.score = Score;
+                //    scoreList = scoreList.OrderByDescending(s => s.score).ToList();
+                //}
 
                 foreach (dreamloLeaderBoard.Score currentScore in scoreList)
                 {
