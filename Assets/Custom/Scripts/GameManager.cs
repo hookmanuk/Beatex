@@ -59,7 +59,7 @@ public class GameManager : MonoBehaviour
 
     public LaserBeam ActiveLaserBeam {get; set;}
     public string SelectedLetter { get; set; }
-    public int Wave { get; set; } = 0;
+    public int Wave = 0;
     private int _enemiesToSpawn = 3;
     public float Speed = 1f;
     public bool NukeIsExploding { get; set; }
@@ -81,6 +81,7 @@ public class GameManager : MonoBehaviour
     public int Score = 0;
     private float _startTime;
     public int _pacifyCount = 0;
+    private bool _pauseWaves = false;
 
     public List<Enemy> EnemiesHit = new List<Enemy>();
     dreamloLeaderBoard dl; //http://dreamlo.com/lb/3wAj4tobOEuqRbj6b88HjgrqDHY0wK_UCkp0R3ncu2vQ
@@ -245,6 +246,7 @@ public class GameManager : MonoBehaviour
                 else if (GameType == GameType.Arcade)
                 {
                     //Arcade Mode here!
+                    ArcadeEnemySpawnCheck();
                 }
                 else if (GameType == GameType.Pacifism)
                 {
@@ -373,89 +375,103 @@ public class GameManager : MonoBehaviour
         }        
     }
 
-    private void ChallengeEnemySpawnCheck()
-    {        
-        if (_waveWarnsPlayed == 0 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 11)) //on 11th beat
+    private void PreWaveCheck()
+    {
+        if (!_pauseWaves)
         {
-            //Calculate positions for spawns
-            _spawnPositions = new Vector3[_enemiesToSpawn];
-            _centralSpawnPoint = UFO.transform.position + GetRandomPosition(2,3);
-
-            for (int i = 0; i < _enemiesToSpawn; i++)
+            if (_waveWarnsPlayed == 0 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 11)) //on 11th beat
             {
-                _spawnPositions[i] = UnityEngine.Random.insideUnitSphere * 1.25f + _centralSpawnPoint;
+                //Calculate positions for spawns
+                _spawnPositions = new Vector3[_enemiesToSpawn];
+                _centralSpawnPoint = UFO.transform.position + GetRandomPosition(2, 3);
+
+                for (int i = 0; i < _enemiesToSpawn; i++)
+                {
+                    _spawnPositions[i] = UnityEngine.Random.insideUnitSphere * 1.25f + _centralSpawnPoint;
+                }
+
+                CreateSpawnParticles();
+
+                //set the audio source to play where the wave will spawn
+                WaveAudioSource.gameObject.transform.position = _centralSpawnPoint;
+
+                _waveWarnsPlayed++;
             }
 
-            CreateSpawnParticles();            
+            //delay half a beat??
+            if (_waveWarnsPlayed == 1 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 11.5f))
+            {
+                AudioManager.Instance.PlayWaveWarn(WaveAudioSource);
+                _waveWarnsPlayed++;
+            }
 
-            //set the audio source to play where the wave will spawn
-            WaveAudioSource.gameObject.transform.position = _centralSpawnPoint;
-            
-            _waveWarnsPlayed++;            
+            if (_waveWarnsPlayed == 2 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 12)) //on 12th beat
+            {
+                SpawnParticles(1);
+                _waveWarnsPlayed++;
+            }
+
+            if (_waveWarnsPlayed == 3 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 13.5f)) //on 13th beat
+            {
+                AudioManager.Instance.PlayWaveWarn(WaveAudioSource);
+                _waveWarnsPlayed++;
+            }
+
+            if (_waveWarnsPlayed == 4 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 14)) //on 14th beat
+            {
+                SpawnParticles(2);
+                _waveWarnsPlayed++;
+            }
+
+            if (_waveWarnsPlayed == 5 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 15.5f)) //on 15th beat
+            {
+                AudioManager.Instance.PlayWaveStart(WaveAudioSource);
+                _waveWarnsPlayed++;
+            }
         }
+    }
 
-        //delay half a beat??
-        if (_waveWarnsPlayed == 1 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 11.5f))
+    private void SpawnEnemies()
+    {
+        Enemy enemySpawn = null;
+
+        //spawn enemies
+        for (int i = 0; i < _enemiesToSpawn; i++)
         {
-            AudioManager.Instance.PlayWaveWarn(WaveAudioSource);
-            _waveWarnsPlayed++;
-        }
+            switch (UnityEngine.Random.Range((int)0, (int)3).ToString())
+            {
+                case "0":
+                    enemySpawn = EnemyRedSource;
+                    break;
+                case "1":
+                    enemySpawn = EnemyGreenSource;
+                    break;
+                case "2":
+                    enemySpawn = EnemyBlueSource;
+                    break;
+                default:
+                    break;
+            }
 
-        if (_waveWarnsPlayed == 2 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 12)) //on 12th beat
-        {
-            SpawnParticles(1);
-            _waveWarnsPlayed++;
+            enemySpawn = GameObject.Instantiate(enemySpawn);
+            enemySpawn.gameObject.SetActive(true);
+            enemySpawn.gameObject.transform.position = _spawnPositions[i];
+            enemySpawn.gameObject.transform.rotation = Quaternion.LookRotation((enemySpawn.gameObject.transform.position - UFO.transform.position).normalized); //rotate to look at UFO
         }
+    }
 
-        if (_waveWarnsPlayed == 3 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 13.5f)) //on 13th beat
-        {            
-            AudioManager.Instance.PlayWaveWarn(WaveAudioSource);
-            _waveWarnsPlayed++;
-        }
-
-        if (_waveWarnsPlayed == 4 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 14)) //on 14th beat
-        {
-            SpawnParticles(2);
-            _waveWarnsPlayed++;
-        }
-
-        if (_waveWarnsPlayed == 5 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 15.5f)) //on 15th beat
-        {            
-            AudioManager.Instance.PlayWaveStart(WaveAudioSource);
-            _waveWarnsPlayed++;
-        }
+    private void ChallengeEnemySpawnCheck()
+    {
+        PreWaveCheck();
 
         if (_secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 16)) //every 16 beats
         {
             _secsSinceEnemySpawn = 0;
             _waveWarnsPlayed = 0;
-            Enemy enemySpawn = null;
 
             SpawnParticles(3);
 
-            //spawn enemies
-            for (int i = 0; i < _enemiesToSpawn; i++)
-            {
-                switch (UnityEngine.Random.Range((int)0, (int)3).ToString())
-                {
-                    case "0":
-                        enemySpawn = EnemyRedSource;
-                        break;
-                    case "1":
-                        enemySpawn = EnemyGreenSource;
-                        break;
-                    case "2":
-                        enemySpawn = EnemyBlueSource;
-                        break;
-                    default:
-                        break;
-                }
-
-                enemySpawn = GameObject.Instantiate(enemySpawn);
-                enemySpawn.gameObject.SetActive(true);
-                enemySpawn.gameObject.transform.position = _spawnPositions[i];
-                enemySpawn.gameObject.transform.rotation = Quaternion.LookRotation((enemySpawn.gameObject.transform.position - UFO.transform.position).normalized); //rotate to look at UFO
-            }
+            SpawnEnemies();
 
             if (_enemiesToSpawn >= 5)
             {
@@ -484,7 +500,6 @@ public class GameManager : MonoBehaviour
                         slowMotion.gameObject.SetActive(true);
                         slowMotion.gameObject.transform.position = GetRandomPosition(0.5f, 1f, 0.5f, 1.5f);
                     }
-
                 }
             }
 
@@ -497,6 +512,51 @@ public class GameManager : MonoBehaviour
         else
         {
             _secsSinceEnemySpawn += Time.deltaTime * GameManager.Instance.Speed;
+        }
+    }
+
+    private void ArcadeEnemySpawnCheck()
+    {
+        if (!_pauseWaves)
+        {
+            PreWaveCheck();
+
+            if (_secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 16)) //every 16 beats
+            {
+                _secsSinceEnemySpawn = 0;
+                _waveWarnsPlayed = 0;
+
+                SpawnParticles(3);
+
+                switch (Wave + 1)
+                {
+                    case 1:
+                        _enemiesToSpawn = 5;
+                        SpawnEnemies();
+                        break;
+                    case 2:
+                        _enemiesToSpawn = 7;
+                        SpawnEnemies();
+                        break;
+                    case 3:
+                        _enemiesToSpawn = 9;
+                        SpawnEnemies();
+                        break;
+                    case 4:
+                        _pauseWaves = true;
+                        break;
+                    default:
+                        break;
+                }
+
+                AudioManager.Instance.PlayWaveNo();
+                Wave++;
+                StartCoroutine(ShowText("Wave " + Wave.ToString(), TextType.PlayerInfo));
+            }
+            else
+            {
+                _secsSinceEnemySpawn += Time.deltaTime * GameManager.Instance.Speed;
+            }
         }
     }
 
@@ -797,7 +857,10 @@ public class GameManager : MonoBehaviour
 
             Score = 0;
             ComboMultiplier = 0;
-            Wave = 0;
+            if (!DebugPlay)
+            {
+                Wave = 0;
+            }
             IsStarted = true;
             ScoreboardText.UpdateText(Score);            
 
