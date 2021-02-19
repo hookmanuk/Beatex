@@ -40,7 +40,7 @@ public class Boss1 : MonoBehaviour
                 {
                     t = 0;
                     _sourcePosition = transform.localPosition;
-                    _targetPosition = transform.localPosition + new Vector3(MovementX, 0, 0);
+                    _targetPosition = transform.localPosition + transform.right * MovementX;
                 }                
                 
                 break;
@@ -49,7 +49,7 @@ public class Boss1 : MonoBehaviour
                 {
                     t = 0;
                     _sourcePosition = transform.localPosition;
-                    _targetPosition = transform.localPosition + new Vector3(0, MovementY, 0);
+                    _targetPosition = transform.localPosition + transform.up * MovementY;
                 }
                 
                 break;
@@ -58,7 +58,7 @@ public class Boss1 : MonoBehaviour
                 {
                     t = 0;
                     _sourcePosition = transform.localPosition;
-                    _targetPosition = transform.localPosition - new Vector3(MovementX, 0, 0);
+                    _targetPosition = transform.localPosition - transform.right * MovementX;
                 }                
 
                 break;
@@ -67,7 +67,7 @@ public class Boss1 : MonoBehaviour
                 {
                     t = 0;
                     _sourcePosition = transform.localPosition;
-                    _targetPosition = transform.localPosition - new Vector3(0, MovementY, 0);
+                    _targetPosition = transform.localPosition - transform.up * MovementY;
                 }
 
                 break;
@@ -96,7 +96,7 @@ public class Boss1 : MonoBehaviour
             foreach (var item in _bossTurrets)
             {
                 //this works when boss at zero rotation, suspect it breaks when it rotates though!
-                ProjectileRenderer.Instance.SpawnProjectile(item.transform.position, Quaternion.LookRotation((new Vector3(item.transform.position.x, item.transform.position.y, GameManager.Instance.UFO.transform.position.z) - item.transform.position).normalized), EnemyType.Blue);
+                ProjectileRenderer.Instance.SpawnProjectile(item.transform.position, Quaternion.LookRotation(item.transform.forward), EnemyType.Blue);
             }            
         }
         else

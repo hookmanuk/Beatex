@@ -51,6 +51,8 @@ public class GameManager : MonoBehaviour
     public GameObject Scoreboard;
     public GameType GameType;
     public HighScores HighScores;
+    public Boss1 Boss1;
+    public Cage Cage;
     public SelectStart[] SelectStartTypes;   
     public bool ThirdPersonMirror;
     public bool ResetToStartOnDeath = true;
@@ -460,6 +462,31 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    private void SpawnBoss(WaveType waveType)
+    {        
+        switch (waveType)
+        {
+            case WaveType.Boss1Phase1:
+                var bossSpawn = GameObject.Instantiate(Boss1);
+                bossSpawn.gameObject.SetActive(true);
+                bossSpawn.gameObject.transform.position = new Vector3(_centralSpawnPoint.x, 1.5f, _centralSpawnPoint.y); //ensure always decent height
+                bossSpawn.gameObject.transform.rotation = Quaternion.LookRotation((Camera.transform.position - bossSpawn.gameObject.transform.position).normalized); //rotate to look at UFO
+
+                //var cage = GameObject.Instantiate(Cage);
+                //cage.gameObject.SetActive(true);
+                //cage.SetPosition(Camera.transform.position - Vector3.up * 0.25f);
+                break;
+            case WaveType.Boss1Phase2:
+                break;
+            case WaveType.Boss1Phase3:
+                break;
+            default:
+                break;
+        }
+
+        _pauseWaves = true;
+    }
+
     private void ChallengeEnemySpawnCheck()
     {
         PreWaveCheck();
@@ -531,8 +558,9 @@ public class GameManager : MonoBehaviour
                 switch (Wave + 1)
                 {
                     case 1:
-                        _enemiesToSpawn = 5;
-                        SpawnEnemies();
+                        //_enemiesToSpawn = 5;
+                        //SpawnEnemies();                        
+                        SpawnBoss(WaveType.Boss1Phase1);
                         break;
                     case 2:
                         _enemiesToSpawn = 7;
@@ -543,7 +571,7 @@ public class GameManager : MonoBehaviour
                         SpawnEnemies();
                         break;
                     case 4:
-                        _pauseWaves = true;
+                        SpawnBoss(WaveType.Boss1Phase1);
                         break;
                     default:
                         break;
@@ -743,78 +771,81 @@ public class GameManager : MonoBehaviour
     IEnumerator ShootBeam()
     {
         ActiveLaserBeam.transform.position = UFO.transform.position;
-        var beamDirection = (SecondaryController.transform.position - UFO.transform.position).normalized;
-        //yield return new WaitForSeconds(0.1f);
-        
-        GameObject firstHitObject = null;
-        float radiusToCheck = 0.05f;        
-        RaycastHit[] hitObjects;
-
-        //check for objects, increasing radius as we go
-        bool destoryAll = true; //first check destroys all in path, subsequent only destroys first hit, not all as radius too wide
-        while (radiusToCheck < 1f)
+        if (SecondaryController != null)
         {
-            Vector3 sphereRadiusLength = beamDirection * radiusToCheck;
-            hitObjects = Physics.SphereCastAll(UFO.transform.position + sphereRadiusLength, radiusToCheck, beamDirection, 10f);            
-            foreach (var hitObject in hitObjects)
-            {
-                Enemy enemy = hitObject.collider.gameObject.GetComponentInParent<Enemy>();
+            var beamDirection = (SecondaryController.transform.position - UFO.transform.position).normalized;
+            //yield return new WaitForSeconds(0.1f);
 
-                if (hitObject.collider.gameObject.GetComponentInParent<Mothership>() != null)
+            GameObject firstHitObject = null;
+            float radiusToCheck = 0.05f;
+            RaycastHit[] hitObjects;
+
+            //check for objects, increasing radius as we go
+            bool destoryAll = true; //first check destroys all in path, subsequent only destroys first hit, not all as radius too wide
+            while (radiusToCheck < 1f)
+            {
+                Vector3 sphereRadiusLength = beamDirection * radiusToCheck;
+                hitObjects = Physics.SphereCastAll(UFO.transform.position + sphereRadiusLength, radiusToCheck, beamDirection, 10f);
+                foreach (var hitObject in hitObjects)
                 {
-                    enemy = hitObject.collider.gameObject.GetComponentInParent<Mothership>();
-                }
-                if (enemy != null && !enemy.IsHit)
-                {
-                    if (firstHitObject == null)
+                    Enemy enemy = hitObject.collider.gameObject.GetComponentInParent<Enemy>();
+
+                    if (hitObject.collider.gameObject.GetComponentInParent<Mothership>() != null)
                     {
-                        firstHitObject = enemy.gameObject;                        
-                    }                    
-                    enemy.Hit();
-                    
-                    if (!destoryAll)
+                        enemy = hitObject.collider.gameObject.GetComponentInParent<Mothership>();
+                    }
+                    if (enemy != null && !enemy.IsHit)
                     {
-                        break; //we hit something using auto aim, stop checking other objects
+                        if (firstHitObject == null)
+                        {
+                            firstHitObject = enemy.gameObject;
+                        }
+                        enemy.Hit();
+
+                        if (!destoryAll)
+                        {
+                            break; //we hit something using auto aim, stop checking other objects
+                        }
                     }
                 }
+
+                if (firstHitObject != null)
+                {
+                    break; //we hit something, stop checking further away
+                }
+
+                destoryAll = false;
+                radiusToCheck += 0.05f;
             }
 
             if (firstHitObject != null)
             {
-                break; //we hit something, stop checking further away
+                beamDirection = (firstHitObject.transform.position - UFO.transform.position).normalized;
+            }
+            else
+            {
+                ComboMultiplier = 0;
             }
 
-            destoryAll = false;
-            radiusToCheck += 0.05f;
-        }
+            if (beamDirection != Vector3.zero)
+            {
+                ActiveLaserBeam.transform.rotation = Quaternion.LookRotation(beamDirection);
+            }
+            ActiveLaserBeam.gameObject.SetActive(true);
 
-        if (firstHitObject != null)
-        {                       
-            beamDirection = (firstHitObject.transform.position - UFO.transform.position).normalized;
-        }
-        else
-        {
-            ComboMultiplier = 0;
-        }
+            while (_secsSinceBeam < 0.15f)
+            {
+                ActiveLaserBeam.transform.position += beamDirection * 20 * Time.unscaledDeltaTime;
 
-        if (beamDirection != Vector3.zero)
-        {
-            ActiveLaserBeam.transform.rotation = Quaternion.LookRotation(beamDirection);
-        }
-        ActiveLaserBeam.gameObject.SetActive(true);
+                yield return null;
+            }
 
-        while (_secsSinceBeam < 0.15f)
-        {
-            ActiveLaserBeam.transform.position += beamDirection * 20 * Time.unscaledDeltaTime;
+            //yield return new WaitForSeconds(0.2f);
 
-            yield return null;
-        }
-
-        //yield return new WaitForSeconds(0.2f);
-
-        if (ActiveLaserBeam.gameObject.activeSelf)
-        {
-            GameObject.Destroy(ActiveLaserBeam.gameObject);
+            if (ActiveLaserBeam.gameObject.activeSelf)
+            {
+                GameObject.Destroy(ActiveLaserBeam.gameObject);
+            }
         }
     }
 
@@ -1057,4 +1088,11 @@ public enum TextType
 {
     PlayerInfo,
     EnemyScore
+}
+
+public enum WaveType
+{
+    Boss1Phase1,
+    Boss1Phase2,
+    Boss1Phase3,
 }
