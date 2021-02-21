@@ -24,7 +24,7 @@ public class GameManager : MonoBehaviour
     public GameObject SecondaryController { get; set; }
     public GameObject SecondaryHand { get; set; }
     public GameObject SightLineSource;
-    public UFO UFO;
+    public PlayerShip PlayerShip;
     public Enemy EnemyRedSource;
     public Enemy EnemyGreenSource;
     public Enemy EnemyBlueSource;
@@ -58,6 +58,7 @@ public class GameManager : MonoBehaviour
     public bool ResetToStartOnDeath = true;
     public bool DebugPlay;
     public float DayNightCycleSpeed;
+    public Polarity Polarity;
 
     public LaserBeam ActiveLaserBeam {get; set;}
     public string SelectedLetter { get; set; }
@@ -68,7 +69,8 @@ public class GameManager : MonoBehaviour
 
     private float _secsSinceBeat = 0;
     private float _secsSinceBeam = 0;
-    private float _secsSinceEnemySpawn = 0;    
+    private float _secsSinceEnemySpawn = 0;
+    private float _secsSincePolarity = 0;
     private bool _isMovingSpectatorCam = false;
     public bool IsStarted { get; set; } = false;
     public bool IsOnBeat { get; set; } = false;
@@ -81,9 +83,16 @@ public class GameManager : MonoBehaviour
     private SpawnParticles _spawnParticles;
     public int ComboMultiplier = 0;
     public int Score = 0;
+    public float FillRate { get { return _fillCount / (float)_maxFill; } }
+    public float CapsuleFillRate { get { return (Polarity == Polarity.Blue ? _beatCapsuleBlueStrength : _beatCapsuleGreenStrength) / 32f; } }
+    private int _fillCount = 0;
+    private int _maxFill = 50;
     private float _startTime;
     public int _pacifyCount = 0;
     private bool _pauseWaves = false;
+    private float _secsSinceClick = 0;
+    private int _beatCapsuleGreenStrength = 32;
+    private int _beatCapsuleBlueStrength = 32;
 
     public List<Enemy> EnemiesHit = new List<Enemy>();
     dreamloLeaderBoard dl; //http://dreamlo.com/lb/3wAj4tobOEuqRbj6b88HjgrqDHY0wK_UCkp0R3ncu2vQ
@@ -153,6 +162,7 @@ public class GameManager : MonoBehaviour
         }
 
         _startTime = Time.time;
+        PlayerShip.SetCapsuleFillRate(1);
 
         if (DebugPlay)
         {
@@ -177,11 +187,20 @@ public class GameManager : MonoBehaviour
         {
             SecondaryController = LeftController;
         }
+
+        SecondaryController.GetComponent<XRDirectInteractor>().enabled = false;
         if (SecondaryController.GetComponentInChildren<Controller>() != null)
-        {
+        {            
             SecondaryHand = SecondaryController.GetComponentInChildren<Controller>().gameObject;
+
             SecondaryHand.SetActive(false);
         }
+    }
+
+    public void UnselectControllers()
+    {
+        SecondaryController.GetComponent<XRDirectInteractor>().enabled = true;
+        SecondaryHand.SetActive(true);
     }
 
     private void XRDevice_deviceLoaded(string obj)
@@ -232,9 +251,11 @@ public class GameManager : MonoBehaviour
             }
             else
             {
-                RearVignetteCheck();
+                RearVignetteCheck();                
 
                 BeatCheck();
+
+                PolarityCheck();
 
                 if (GameType == GameType.Challenge || GameType == GameType.Arcade)
                 {
@@ -258,6 +279,73 @@ public class GameManager : MonoBehaviour
         }
 
         RenderSettings.skybox.SetFloat("_Rotation", ((Time.time - _startTime) * DayNightCycleSpeed + 210f));
+    }
+
+    private void PolarityCheck()
+    {
+        var rightHandDevices = new List<UnityEngine.XR.InputDevice>();
+        UnityEngine.XR.InputDevices.GetDevicesAtXRNode(UnityEngine.XR.XRNode.RightHand, rightHandDevices);
+
+        bool triggerValue = false;
+        rightHandDevices[0].TryGetFeatureValue(UnityEngine.XR.CommonUsages.triggerButton, out triggerValue);
+
+        if (!triggerValue)
+        {
+            var leftHandDevices = new List<UnityEngine.XR.InputDevice>();
+            UnityEngine.XR.InputDevices.GetDevicesAtXRNode(UnityEngine.XR.XRNode.RightHand, leftHandDevices);
+
+            triggerValue = false;
+            rightHandDevices[0].TryGetFeatureValue(UnityEngine.XR.CommonUsages.triggerButton, out triggerValue);
+        }
+
+        if (triggerValue && _secsSinceClick > 0.4f)
+        {
+            _secsSinceClick = 0;
+            PlayerShip.FlipPolarity();
+        }
+        else
+        {
+            _secsSinceClick += Time.deltaTime;
+
+            if (IsOnBeat)
+            {
+                if (Polarity == Polarity.Blue)
+                {
+                    _beatCapsuleBlueStrength--;
+
+                    if (_beatCapsuleGreenStrength < 32)
+                    {
+                        _beatCapsuleGreenStrength++;
+                    }
+                }
+                else
+                {
+                    _beatCapsuleGreenStrength--;
+
+                    if (_beatCapsuleBlueStrength < 32)
+                    {
+                        _beatCapsuleBlueStrength++;
+                    }                  
+                }
+
+                if (_beatCapsuleBlueStrength <= 0 || _beatCapsuleGreenStrength <= 0)
+                {
+                    PlayerShip.FlipPolarity();
+                }
+
+                PlayerShip.SetCapsuleFillRate(CapsuleFillRate);
+            }
+        }        
+
+        //if (_secsSincePolarity >= (60 / AudioManager.Instance.BPM * 16)) //every 16 beats
+        //{
+        //    _secsSincePolarity = 0;
+        //    PlayerShip.FlipPolarity();            
+        //}
+        //else
+        //{
+        //    _secsSincePolarity += Time.deltaTime;
+        //}
     }
 
     private void RefreshRateCheck()
@@ -288,11 +376,50 @@ public class GameManager : MonoBehaviour
         }        
     }
 
+    public bool ProjectileCollision(ProjectileData projectile)
+    {
+        bool blnStop = false;
+
+        if ((projectile.enemyType == EnemyType.Blue && Polarity == Polarity.Blue) || (projectile.enemyType == EnemyType.Green && Polarity == Polarity.Green))
+        {
+            if(_fillCount < _maxFill)
+            {
+                _fillCount += 1;
+                PlayerShip.SetFillRate(FillRate);
+            }            
+            else
+            {
+                //create nuke at player position to explode
+                Nuke nuke = Instantiate(NukeSource);
+                nuke.gameObject.SetActive(true);
+                nuke.gameObject.transform.position = PlayerShip.transform.position;
+
+                _fillCount = 0;
+                PlayerShip.SetFillRate(0);
+            }
+        }
+        else
+        {
+            _fillCount -= _maxFill/2;
+            PlayerShip.SetFillRate(FillRate);
+        }
+
+        if (_fillCount < 0)
+        {
+            _fillCount = 0;
+            PlayerShip.SetFillRate(0);
+            blnStop = true;
+            GameManager.Instance.StopGame();
+        }
+
+        return blnStop;
+    }
+
     private bool EnemyHit()
     {
         _destroyer = null;
 
-        Collider[] objectsHitPlayer = Physics.OverlapSphere(UFO.transform.position, 0.04f);
+        Collider[] objectsHitPlayer = Physics.OverlapSphere(PlayerShip.transform.position, 0.04f);
         foreach (var item in objectsHitPlayer)
         {
             if (item.gameObject.GetComponentInParent<Enemy>() != null)
@@ -319,14 +446,14 @@ public class GameManager : MonoBehaviour
 
     private void RearVignetteCheck()
     {
-        Collider[] objectsBehind = Physics.OverlapBox(UFO.transform.position - Camera.transform.forward.normalized * 0.5f, new Vector3(0.75f, 0.45f, 0.45f), Quaternion.LookRotation(Camera.transform.forward, Vector3.up));
+        Collider[] objectsBehind = Physics.OverlapBox(PlayerShip.transform.position - Camera.transform.forward.normalized * 0.5f, new Vector3(0.75f, 0.45f, 0.45f), Quaternion.LookRotation(Camera.transform.forward, Vector3.up));
 
         float closestDistance = 999f;
         foreach (var item in objectsBehind)
         {
             if (item.gameObject.GetComponentInParent<Enemy>())
             {
-                var itemDistance = (UFO.transform.position - item.ClosestPoint(UFO.transform.position)).magnitude;
+                var itemDistance = (PlayerShip.transform.position - item.ClosestPoint(PlayerShip.transform.position)).magnitude;
                 //Debug.Log(item.name + " " + itemDistance);
 
                 if (itemDistance < closestDistance)
@@ -385,7 +512,7 @@ public class GameManager : MonoBehaviour
             {
                 //Calculate positions for spawns
                 _spawnPositions = new Vector3[_enemiesToSpawn];
-                _centralSpawnPoint = UFO.transform.position + GetRandomPosition(2, 3);
+                _centralSpawnPoint = PlayerShip.transform.position + GetRandomPosition(2, 3);
 
                 for (int i = 0; i < _enemiesToSpawn; i++)
                 {
@@ -458,7 +585,7 @@ public class GameManager : MonoBehaviour
             enemySpawn = GameObject.Instantiate(enemySpawn);
             enemySpawn.gameObject.SetActive(true);
             enemySpawn.gameObject.transform.position = _spawnPositions[i];
-            enemySpawn.gameObject.transform.rotation = Quaternion.LookRotation((enemySpawn.gameObject.transform.position - UFO.transform.position).normalized); //rotate to look at UFO
+            enemySpawn.gameObject.transform.rotation = Quaternion.LookRotation((enemySpawn.gameObject.transform.position - PlayerShip.transform.position).normalized); //rotate to look at UFO
         }
     }
 
@@ -507,13 +634,14 @@ public class GameManager : MonoBehaviour
                     Mothership mothership = Instantiate(EnemyMothershipSource);
                     mothership.gameObject.SetActive(true);
                     mothership.gameObject.transform.position = WaveAudioSource.gameObject.transform.position * 1.3f;
-                    mothership.gameObject.transform.rotation = Quaternion.LookRotation((mothership.gameObject.transform.position - UFO.transform.position).normalized); //rotate to look at UFO
+                    mothership.gameObject.transform.rotation = Quaternion.LookRotation((mothership.gameObject.transform.position - PlayerShip.transform.position).normalized); //rotate to look at UFO
                 }
 
-                if (Math.IEEERemainder(_enemiesToSpawn - 7, 3) == 0)
+                if (Math.IEEERemainder(_enemiesToSpawn - 7, 4) == 0)
                 //if (Math.IEEERemainder(_enemiesToSpawn - 5, 1) == 0) //for testing
                 {
-                    int randomPowerupType = UnityEngine.Random.Range(1, 3);
+                    //int randomPowerupType = UnityEngine.Random.Range(1, 3);
+                    int randomPowerupType = 2; //always slow down
 
                     if (randomPowerupType == 1)
                     {
@@ -594,7 +722,7 @@ public class GameManager : MonoBehaviour
         {
             //Calculate positions for spawns
             _spawnPositions = new Vector3[_enemiesToSpawn];
-            _centralSpawnPoint = UFO.transform.position + GetRandomPosition(2, 3);
+            _centralSpawnPoint = PlayerShip.transform.position + GetRandomPosition(2, 3);
 
             for (int i = 0; i < _enemiesToSpawn; i++)
             {
@@ -628,7 +756,7 @@ public class GameManager : MonoBehaviour
                 enemySpawn = GameObject.Instantiate(enemySpawn);
                 enemySpawn.gameObject.SetActive(true);
                 enemySpawn.gameObject.transform.position = _spawnPositions[i];
-                enemySpawn.gameObject.transform.rotation = Quaternion.LookRotation((enemySpawn.gameObject.transform.position - UFO.transform.position).normalized); //rotate to look at UFO
+                enemySpawn.gameObject.transform.rotation = Quaternion.LookRotation((enemySpawn.gameObject.transform.position - PlayerShip.transform.position).normalized); //rotate to look at UFO
             }
 
             //if (Math.IEEERemainder(_pacifyCount, 4) == 1)
@@ -676,7 +804,7 @@ public class GameManager : MonoBehaviour
         //    yield return new WaitForSeconds(0.01f);
         //}        
 
-        Vector3 endPosition = UFO.transform.position - (Camera.transform.forward) * 1f + Vector3.up * 0.4f;
+        Vector3 endPosition = PlayerShip.transform.position - (Camera.transform.forward) * 1f + Vector3.up * 0.4f;
         Quaternion endRotation = Quaternion.LookRotation(Camera.transform.forward);
         while (t < 0.3f)
         {
@@ -694,7 +822,7 @@ public class GameManager : MonoBehaviour
     {
         _spawnParticles = Instantiate(SpawnIn);
         _spawnParticles.transform.position = _centralSpawnPoint;
-        _spawnParticles.transform.rotation = Quaternion.LookRotation(UFO.transform.position - _centralSpawnPoint);
+        _spawnParticles.transform.rotation = Quaternion.LookRotation(PlayerShip.transform.position - _centralSpawnPoint);
         _spawnParticles.gameObject.SetActive(true);
     }
 
@@ -770,10 +898,11 @@ public class GameManager : MonoBehaviour
 
     IEnumerator ShootBeam()
     {
-        ActiveLaserBeam.transform.position = UFO.transform.position;
+        ActiveLaserBeam.transform.position = PlayerShip.transform.position;
+        
         if (SecondaryController != null)
         {
-            var beamDirection = (SecondaryController.transform.position - UFO.transform.position).normalized;
+            var beamDirection = (SecondaryController.transform.position - ActiveLaserBeam.transform.position).normalized;
             //yield return new WaitForSeconds(0.1f);
 
             GameObject firstHitObject = null;
@@ -785,7 +914,7 @@ public class GameManager : MonoBehaviour
             while (radiusToCheck < 1f)
             {
                 Vector3 sphereRadiusLength = beamDirection * radiusToCheck;
-                hitObjects = Physics.SphereCastAll(UFO.transform.position + sphereRadiusLength, radiusToCheck, beamDirection, 10f);
+                hitObjects = Physics.SphereCastAll(ActiveLaserBeam.transform.position + sphereRadiusLength, radiusToCheck, beamDirection, 10f);
                 foreach (var hitObject in hitObjects)
                 {
                     Enemy enemy = hitObject.collider.gameObject.GetComponentInParent<Enemy>();
@@ -794,8 +923,12 @@ public class GameManager : MonoBehaviour
                     {
                         enemy = hitObject.collider.gameObject.GetComponentInParent<Mothership>();
                     }
-                    if (enemy != null && !enemy.IsHit)
-                    {
+
+                    if (enemy != null 
+                        && !enemy.IsHit 
+                        && !(enemy.Type == EnemyType.Blue && Polarity == Polarity.Blue) 
+                        && !(enemy.Type == EnemyType.Green && Polarity == Polarity.Green))
+                    {                        
                         if (firstHitObject == null)
                         {
                             firstHitObject = enemy.gameObject;
@@ -820,7 +953,7 @@ public class GameManager : MonoBehaviour
 
             if (firstHitObject != null)
             {
-                beamDirection = (firstHitObject.transform.position - UFO.transform.position).normalized;
+                beamDirection = (firstHitObject.transform.position - ActiveLaserBeam.transform.position).normalized;
             }
             else
             {
@@ -832,6 +965,8 @@ public class GameManager : MonoBehaviour
                 ActiveLaserBeam.transform.rotation = Quaternion.LookRotation(beamDirection);
             }
             ActiveLaserBeam.gameObject.SetActive(true);
+
+            ActiveLaserBeam.transform.position += PlayerShip.transform.up * 0.08f;
 
             while (_secsSinceBeam < 0.15f)
             {
@@ -893,7 +1028,9 @@ public class GameManager : MonoBehaviour
                 Wave = 0;
             }
             IsStarted = true;
-            ScoreboardText.UpdateText(Score);            
+            ScoreboardText.UpdateText(Score);
+
+            PlayerShip.SetFillRate(0);
 
             //_sightLine = GameObject.Instantiate(SightLineSource);
             //_sightLine.SetActive(true);
@@ -949,7 +1086,7 @@ public class GameManager : MonoBehaviour
             CurrentScoreboard.SetActive(false);
             HighScoreboard.SetActive(true);
 
-            UFO.gameObject.transform.position = new Vector3(0, 1.1f, 0);            
+            PlayerShip.gameObject.transform.position = new Vector3(0, 1.1f, 0);            
 
             foreach (var item in SelectStartTypes)
             {
@@ -998,7 +1135,7 @@ public class GameManager : MonoBehaviour
             item.gameObject.SetActive(!clear);
         }
 
-        UFO.gameObject.SetActive(!clear);
+        PlayerShip.gameObject.SetActive(!clear);
         
         RightController.SetActive(!clear);
         RightPointer.SetActive(clear);
@@ -1095,4 +1232,10 @@ public enum WaveType
     Boss1Phase1,
     Boss1Phase2,
     Boss1Phase3,
+}
+
+public enum Polarity
+{
+    Green,
+    Blue
 }

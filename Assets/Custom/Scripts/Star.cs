@@ -18,14 +18,14 @@ public class Star : MonoBehaviour
         transform.RotateAround(Vector3.zero, Vector3.right, Speed * Time.deltaTime * GameManager.Instance.DayNightCycleSpeed);
         transform.LookAt(Vector3.zero);
 
-        if (transform.position.y < -11f)
+        if (transform.position.y < -5f)
         {
             if (Light.enabled)
             {
                 Light.enabled = false;
             }
         }
-        else if (transform.position.y > 11f)
+        else if (transform.position.y > 5f)
         {
             if (!Light.enabled)
             {

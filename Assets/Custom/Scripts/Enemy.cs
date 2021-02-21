@@ -70,7 +70,7 @@ public class Enemy : MonoBehaviour
                 {
                     _msSinceShot = 0;
                     
-                    ProjectileRenderer.Instance.SpawnProjectile(transform.position, Quaternion.LookRotation((GameManager.Instance.UFO.transform.position - transform.position).normalized), Type);                    
+                    ProjectileRenderer.Instance.SpawnProjectile(transform.position, Quaternion.LookRotation((GameManager.Instance.PlayerShip.transform.position - transform.position).normalized), Type);                    
                 }
                 else
                 {
@@ -218,7 +218,7 @@ public class Enemy : MonoBehaviour
         switch (Type)
         {
             case EnemyType.Green:
-                vector = Quaternion.AngleAxis(-70, Vector3.up) * (GameManager.Instance.UFO.transform.position - transform.position).normalized;                
+                vector = Quaternion.AngleAxis(-70, Vector3.up) * (GameManager.Instance.PlayerShip.transform.position - transform.position).normalized;                
                 while (t < 0.1)
                 {
                     transform.position += vector * 1.5f * Time.deltaTime;
@@ -227,7 +227,7 @@ public class Enemy : MonoBehaviour
                 }
                 break;
             case EnemyType.Red:
-                vector = (GameManager.Instance.UFO.transform.position - transform.position).normalized;                
+                vector = (GameManager.Instance.PlayerShip.transform.position - transform.position).normalized;                
                 while (t < 0.1)
                 {
                     transform.position += vector * 1.5f * Time.deltaTime;

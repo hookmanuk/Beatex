@@ -34,6 +34,6 @@ public class Mothership : Enemy
         Enemy enemySpawn = GameObject.Instantiate(GameManager.Instance.EnemyRedSource);
         enemySpawn.gameObject.SetActive(true);
         enemySpawn.gameObject.transform.position = transform.position;
-        enemySpawn.gameObject.transform.rotation = Quaternion.LookRotation((enemySpawn.gameObject.transform.position - GameManager.Instance.UFO.transform.position).normalized); //rotate to look at UFO
+        enemySpawn.gameObject.transform.rotation = Quaternion.LookRotation((enemySpawn.gameObject.transform.position - GameManager.Instance.PlayerShip.transform.position).normalized); //rotate to look at UFO
     }
 }

@@ -45,7 +45,7 @@ public class ProjectileRenderer : MonoBehaviour
         _instance = this;
         projectiles.Add(EnemyType.Blue, new List<ProjectileData>());
         projectiles.Add(EnemyType.Green, new List<ProjectileData>());
-        _UFO = GameManager.Instance.UFO.gameObject;
+        _UFO = GameManager.Instance.PlayerShip.gameObject;
     }
 
     public void SpawnProjectile(Vector3 position, Quaternion rotation, EnemyType enemyType)
@@ -116,16 +116,26 @@ public class ProjectileRenderer : MonoBehaviour
                 {
                     //check if projectile has hit the player
                     if ((projectileList.Value[i + ii].pos - _UFO.transform.position).sqrMagnitude < 0.01f)
-                    {
+                    {                        
                         var projectileHit = projectileList.Value[i + ii];
-                        //destroy all other projectiles!
-                        foreach (var projectileListToDestroy in projectiles)
+
+                        if (GameManager.Instance.ProjectileCollision(projectileHit))
                         {
-                            projectileListToDestroy.Value.RemoveAll(p => p != projectileHit);
+                            //ship destroyed, destroy all other projectiles!
+                            foreach (var projectileListToDestroy in projectiles)
+                            {
+                                projectileListToDestroy.Value.RemoveAll(p => p != projectileHit);
+                            }
+
+                            blnQuitRendering = true;
+                            break;
                         }
-                        GameManager.Instance.StopGame();
-                        blnQuitRendering = true;
-                        break;
+                        else
+                        {
+                            projectileList.Value.Remove(projectileHit); //projectile absorbed, remove it
+                            //ii--; //reduce by 1 to account for removing current projectile
+                            //batchLimit--;
+                        }
                     }
                     else
                     {
