@@ -96,7 +96,7 @@ public class Boss1 : MonoBehaviour
             foreach (var item in _bossTurrets)
             {
                 //this works when boss at zero rotation, suspect it breaks when it rotates though!
-                ProjectileRenderer.Instance.SpawnProjectile(item.transform.position, Quaternion.LookRotation(item.transform.forward), EnemyType.Blue);
+                ProjectileRenderer.Instance.SpawnProjectile(item.transform.position, Quaternion.LookRotation(transform.forward), EnemyType.Blue);
             }            
         }
         else
