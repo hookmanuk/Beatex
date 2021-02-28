@@ -59,6 +59,7 @@ public class GameManager : MonoBehaviour
     public bool DebugPlay;
     public float DayNightCycleSpeed;
     public Polarity Polarity;
+    public Boss1 CurrentBoss { get; set; }
 
     public LaserBeam ActiveLaserBeam {get; set;}
     public string SelectedLetter { get; set; }
@@ -90,9 +91,10 @@ public class GameManager : MonoBehaviour
     private float _startTime;
     public int _pacifyCount = 0;
     private bool _pauseWaves = false;
+    private string _bossIncomingText = null;
     private float _secsSinceClick = 0;
-    private int _beatCapsuleGreenStrength = 32;
-    private int _beatCapsuleBlueStrength = 32;
+    public int _beatCapsuleGreenStrength = 32;
+    public int _beatCapsuleBlueStrength = 32;
 
     public List<Enemy> EnemiesHit = new List<Enemy>();
     dreamloLeaderBoard dl; //http://dreamlo.com/lb/3wAj4tobOEuqRbj6b88HjgrqDHY0wK_UCkp0R3ncu2vQ
@@ -287,7 +289,10 @@ public class GameManager : MonoBehaviour
         UnityEngine.XR.InputDevices.GetDevicesAtXRNode(UnityEngine.XR.XRNode.RightHand, rightHandDevices);
 
         bool triggerValue = false;
-        rightHandDevices[0].TryGetFeatureValue(UnityEngine.XR.CommonUsages.triggerButton, out triggerValue);
+        if (rightHandDevices.Count > 0)
+        {
+            rightHandDevices[0].TryGetFeatureValue(UnityEngine.XR.CommonUsages.triggerButton, out triggerValue);
+        }
 
         if (!triggerValue)
         {
@@ -295,7 +300,11 @@ public class GameManager : MonoBehaviour
             UnityEngine.XR.InputDevices.GetDevicesAtXRNode(UnityEngine.XR.XRNode.RightHand, leftHandDevices);
 
             triggerValue = false;
-            rightHandDevices[0].TryGetFeatureValue(UnityEngine.XR.CommonUsages.triggerButton, out triggerValue);
+
+            if (leftHandDevices.Count > 0)
+            {
+                leftHandDevices[0].TryGetFeatureValue(UnityEngine.XR.CommonUsages.triggerButton, out triggerValue);
+            }
         }
 
         if (triggerValue && _secsSinceClick > 0.4f)
@@ -312,6 +321,10 @@ public class GameManager : MonoBehaviour
                 if (Polarity == Polarity.Blue)
                 {
                     _beatCapsuleBlueStrength--;
+                    if (_beatCapsuleBlueStrength < 0)
+                    {
+                        _beatCapsuleBlueStrength = 0;
+                    }
 
                     if (_beatCapsuleGreenStrength < 32)
                     {
@@ -321,6 +334,10 @@ public class GameManager : MonoBehaviour
                 else
                 {
                     _beatCapsuleGreenStrength--;
+                    if (_beatCapsuleGreenStrength < 0)
+                    {
+                        _beatCapsuleGreenStrength = 0;
+                    }
 
                     if (_beatCapsuleBlueStrength < 32)
                     {
@@ -484,15 +501,18 @@ public class GameManager : MonoBehaviour
 
     private void BeamShootCheck()
     {
-        if (_secsSinceBeam >= (60 / AudioManager.Instance.BPM * 1)) //every 1 beats
-        {            
-            _secsSinceBeam = 0;
-            ActiveLaserBeam = GameObject.Instantiate(LaserBeamSource);
-            StartCoroutine(ShootBeam());
-        }
-        else
-        {         
-            _secsSinceBeam += Time.unscaledDeltaTime;
+        if (CurrentBoss == null)
+        {
+            if (_secsSinceBeam >= (60 / AudioManager.Instance.BPM * 1)) //every 1 beats
+            {
+                _secsSinceBeam = 0;
+                ActiveLaserBeam = GameObject.Instantiate(LaserBeamSource);
+                StartCoroutine(ShootBeam());
+            }
+            else
+            {
+                _secsSinceBeam += Time.unscaledDeltaTime;
+            }
         }
     }
 
@@ -506,56 +526,67 @@ public class GameManager : MonoBehaviour
 
     private void PreWaveCheck()
     {
-        if (!_pauseWaves)
+        if (CurrentBoss == null)
         {
-            if (_waveWarnsPlayed == 0 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 11)) //on 11th beat
+            if (_bossIncomingText != null)
             {
-                //Calculate positions for spawns
-                _spawnPositions = new Vector3[_enemiesToSpawn];
-                _centralSpawnPoint = PlayerShip.transform.position + GetRandomPosition(2, 3);
-
-                for (int i = 0; i < _enemiesToSpawn; i++)
+                if (_waveWarnsPlayed == 0 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 12))
                 {
-                    _spawnPositions[i] = UnityEngine.Random.insideUnitSphere * 1.25f + _centralSpawnPoint;
+                    StartCoroutine(ShowText(_bossIncomingText, TextType.PlayerInfo));
+                    _waveWarnsPlayed++;
+                }
+            }
+            else
+            {
+                if (_waveWarnsPlayed == 0 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 11)) //on 11th beat
+                {
+                    //Calculate positions for spawns
+                    _spawnPositions = new Vector3[_enemiesToSpawn];
+                    _centralSpawnPoint = PlayerShip.transform.position + GetRandomPosition(2, 3);
+
+                    for (int i = 0; i < _enemiesToSpawn; i++)
+                    {
+                        _spawnPositions[i] = UnityEngine.Random.insideUnitSphere * 1.25f + _centralSpawnPoint;
+                    }
+
+                    CreateSpawnParticles();
+
+                    //set the audio source to play where the wave will spawn
+                    WaveAudioSource.gameObject.transform.position = _centralSpawnPoint;
+
+                    _waveWarnsPlayed++;
                 }
 
-                CreateSpawnParticles();
+                //delay half a beat??
+                if (_waveWarnsPlayed == 1 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 11.5f))
+                {
+                    AudioManager.Instance.PlayWaveWarn(WaveAudioSource);
+                    _waveWarnsPlayed++;
+                }
 
-                //set the audio source to play where the wave will spawn
-                WaveAudioSource.gameObject.transform.position = _centralSpawnPoint;
+                if (_waveWarnsPlayed == 2 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 12)) //on 12th beat
+                {
+                    SpawnParticles(1);
+                    _waveWarnsPlayed++;
+                }
 
-                _waveWarnsPlayed++;
-            }
+                if (_waveWarnsPlayed == 3 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 13.5f)) //on 13th beat
+                {
+                    AudioManager.Instance.PlayWaveWarn(WaveAudioSource);
+                    _waveWarnsPlayed++;
+                }
 
-            //delay half a beat??
-            if (_waveWarnsPlayed == 1 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 11.5f))
-            {
-                AudioManager.Instance.PlayWaveWarn(WaveAudioSource);
-                _waveWarnsPlayed++;
-            }
+                if (_waveWarnsPlayed == 4 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 14)) //on 14th beat
+                {
+                    SpawnParticles(2);
+                    _waveWarnsPlayed++;
+                }
 
-            if (_waveWarnsPlayed == 2 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 12)) //on 12th beat
-            {
-                SpawnParticles(1);
-                _waveWarnsPlayed++;
-            }
-
-            if (_waveWarnsPlayed == 3 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 13.5f)) //on 13th beat
-            {
-                AudioManager.Instance.PlayWaveWarn(WaveAudioSource);
-                _waveWarnsPlayed++;
-            }
-
-            if (_waveWarnsPlayed == 4 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 14)) //on 14th beat
-            {
-                SpawnParticles(2);
-                _waveWarnsPlayed++;
-            }
-
-            if (_waveWarnsPlayed == 5 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 15.5f)) //on 15th beat
-            {
-                AudioManager.Instance.PlayWaveStart(WaveAudioSource);
-                _waveWarnsPlayed++;
+                if (_waveWarnsPlayed == 5 && _secsSinceEnemySpawn >= (60 / AudioManager.Instance.BPM * 15.5f)) //on 15th beat
+                {
+                    AudioManager.Instance.PlayWaveStart(WaveAudioSource);
+                    _waveWarnsPlayed++;
+                }
             }
         }
     }
@@ -594,10 +625,21 @@ public class GameManager : MonoBehaviour
         switch (waveType)
         {
             case WaveType.Boss1Phase1:
+                //nuke to kill all
+                Nuke nuke = Instantiate(NukeSource);
+                nuke.gameObject.SetActive(true);
+                nuke.Explode(20f);
+
                 var bossSpawn = GameObject.Instantiate(Boss1);
                 bossSpawn.gameObject.SetActive(true);
-                bossSpawn.gameObject.transform.position = new Vector3(_centralSpawnPoint.x, 1.5f, _centralSpawnPoint.y); //ensure always decent height
+
+                var frontSpawn = Camera.transform.forward.normalized * 2;
+                frontSpawn = Camera.transform.position + frontSpawn;
+
+                bossSpawn.gameObject.transform.position = new Vector3(frontSpawn.x, 1.2f, frontSpawn.z); //ensure always decent height
                 bossSpawn.gameObject.transform.rotation = Quaternion.LookRotation((Camera.transform.position - bossSpawn.gameObject.transform.position).normalized); //rotate to look at UFO
+
+                CurrentBoss = bossSpawn;
 
                 //var cage = GameObject.Instantiate(Cage);
                 //cage.gameObject.SetActive(true);
@@ -609,9 +651,7 @@ public class GameManager : MonoBehaviour
                 break;
             default:
                 break;
-        }
-
-        _pauseWaves = true;
+        }        
     }
 
     private void ChallengeEnemySpawnCheck()
@@ -672,7 +712,7 @@ public class GameManager : MonoBehaviour
 
     private void ArcadeEnemySpawnCheck()
     {
-        if (!_pauseWaves)
+        if (CurrentBoss == null)
         {
             PreWaveCheck();
 
@@ -686,28 +726,35 @@ public class GameManager : MonoBehaviour
                 switch (Wave + 1)
                 {
                     case 1:
-                        //_enemiesToSpawn = 5;
-                        //SpawnEnemies();                        
-                        SpawnBoss(WaveType.Boss1Phase1);
+                        SpawnEnemies();
+                        _enemiesToSpawn = 7;
+                        //SpawnBoss(WaveType.Boss1Phase1);
                         break;
                     case 2:
-                        _enemiesToSpawn = 7;
                         SpawnEnemies();
+                        _enemiesToSpawn = 9;
                         break;
                     case 3:
-                        _enemiesToSpawn = 9;
                         SpawnEnemies();
+                        _bossIncomingText = "Boss Incoming!!";
                         break;
                     case 4:
                         SpawnBoss(WaveType.Boss1Phase1);
+                        _bossIncomingText = null;
+                        break;
+                    case 5:
+                        SpawnEnemies();
                         break;
                     default:
                         break;
                 }
 
-                AudioManager.Instance.PlayWaveNo();
                 Wave++;
-                StartCoroutine(ShowText("Wave " + Wave.ToString(), TextType.PlayerInfo));
+                if (CurrentBoss == null)
+                {
+                    AudioManager.Instance.PlayWaveNo();
+                    StartCoroutine(ShowText("Wave " + Wave.ToString(), TextType.PlayerInfo));
+                }                
             }
             else
             {
@@ -1042,7 +1089,7 @@ public class GameManager : MonoBehaviour
                 switch (GameType)
                 {
                     case GameType.Arcade:
-                        _enemiesToSpawn = 3;                        
+                        _enemiesToSpawn = 5;                        
                         break;
                     case GameType.Challenge:
                         _enemiesToSpawn = 3;                        

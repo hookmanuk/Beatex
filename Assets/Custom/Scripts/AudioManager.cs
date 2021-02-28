@@ -38,7 +38,7 @@ public class AudioManager : MonoBehaviour
     {
         if (GameManager.Instance.Wave < 15)
         {
-            SFXSource.PlayOneShot(Waves[GameManager.Instance.Wave]);
+            SFXSource.PlayOneShot(Waves[GameManager.Instance.Wave - 1]);
         }        
     }
 

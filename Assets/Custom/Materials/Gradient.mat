@@ -121,7 +121,7 @@ Material:
     - _ZWrite: 1
     m_Colors:
     - Color_8a3643aa518b43d9bb178593b3bca859: {r: 0, g: 1.4980392, b: 0.101960786, a: 0}
-    - GradientColor: {r: 0, g: 2.433572, b: 0.16563578, a: 0}
+    - GradientColor: {r: 0, g: 0.3328632, b: 4.5412054, a: 0}
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}

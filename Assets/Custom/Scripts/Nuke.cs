@@ -13,7 +13,7 @@ public class Nuke : MonoBehaviour
         
     }
 
-    public void Explode()
+    public void Explode(float range = 3f)
     {
         GameManager.Instance.NukeIsExploding = true;
         Exploding = true;
@@ -23,33 +23,40 @@ public class Nuke : MonoBehaviour
             DeathParticleSystem.Play();
         }
 
-        Collider[] objectsNukeKilled = Physics.OverlapSphere(transform.position, 3f);
-        foreach (var item in objectsNukeKilled)
+        if (GameManager.Instance.CurrentBoss != null)
         {
-            var enemy = item.gameObject.GetComponentInParent<Enemy>();
-            if (enemy != null)
-            {                
-                enemy.Hit(true);
-            }
-            var nuke = item.gameObject.GetComponent<Nuke>();
-            if (nuke != null && !nuke.Exploding)
+            GameManager.Instance.CurrentBoss.Hit();
+        }
+        else
+        {
+            Collider[] objectsNukeKilled = Physics.OverlapSphere(transform.position, range);
+            foreach (var item in objectsNukeKilled)
             {
-                nuke.Explode();
+                var enemy = item.gameObject.GetComponentInParent<Enemy>();
+                if (enemy != null)
+                {
+                    enemy.Hit(true);
+                }
+                var nuke = item.gameObject.GetComponent<Nuke>();
+                if (nuke != null && !nuke.Exploding)
+                {
+                    nuke.Explode();
+                }
+            }
+
+            foreach (var list in ProjectileRenderer.Instance.projectiles)
+            {
+                for (int i = 0; i < list.Value.Count; i++)
+                {
+                    if ((transform.position - list.Value[i].pos).sqrMagnitude < range * range)
+                    {
+                        list.Value.RemoveAt(i);
+                        i--;
+                    }
+                }
             }
         }
 
-        foreach (var list in ProjectileRenderer.Instance.projectiles)
-        {
-            for (int i = 0; i < list.Value.Count; i++)
-            {
-                if ((transform.position - list.Value[i].pos).sqrMagnitude < 3*3f)
-                {
-                    list.Value.RemoveAt(i);
-                    i--;
-                }
-            }            
-        }
-        
         StartCoroutine(Deactivate());
     }
 

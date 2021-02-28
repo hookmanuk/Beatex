@@ -77,7 +77,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Floats:
     - Boolean_7937B813: 0
-    - GradientFillRate: 0.526875
+    - GradientFillRate: 0.53000003
     - Vector1_4296D34C: -0.1
     - Vector1_67bbf00ee7ee4974b39733c87c11ffdd: 1
     - Vector1_6844533d3d36461ba4c1a887480d590e: 0.5
@@ -125,7 +125,7 @@ Material:
     m_Colors:
     - Color_17C6C3C7: {r: 1, g: 1, b: 1, a: 0}
     - Color_FB35205B: {r: 0.40094337, g: 0.6140097, b: 1, a: 0}
-    - GradientColor: {r: 0, g: 1.9468577, b: 0.13250862, a: 0}
+    - GradientColor: {r: 0, g: 0.26629058, b: 3.6329644, a: 0}
     - ShieldColor: {r: 0.05096486, g: 0.608393, b: 0, a: 0.3764706}
     - _BaseColor: {r: 0, g: 0, b: 0, a: 1}
     - _Color: {r: 0, g: 0, b: 0, a: 1}

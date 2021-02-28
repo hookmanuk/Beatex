@@ -38,8 +38,13 @@ public class Enemy : MonoBehaviour
                 break;
             case EnemyType.Mothership:
                 _hitRate = 0;
-                _health = 1;
+                _health = 3;
                 _score = 50;
+                break;
+            case EnemyType.Boss1:
+                _hitRate = 0;
+                _health = 3;
+                _score = 10000;
                 break;
             default:
                 break;
@@ -139,7 +144,7 @@ public class Enemy : MonoBehaviour
                 yield return new WaitForSeconds(0.01f);
                 t += 0.01f;
             }
-        }
+        }        
         else
         {
             if (HitParticleSystems != null)
@@ -248,5 +253,6 @@ public enum EnemyType
     Green,
     Red,
     Blue,
-    Mothership
+    Mothership,
+    Boss1
 }
